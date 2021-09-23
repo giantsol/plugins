@@ -420,6 +420,15 @@ class MethodChannelCamera extends CameraPlatform {
     return Texture(textureId: cameraId);
   }
 
+  @override
+  Future<void> switchFilter(int cameraId) =>
+    _channel.invokeMethod<void>(
+      'switchFilter',
+      <String, dynamic> {
+        'cameraId': cameraId,
+      },
+    );
+
   /// Returns the flash mode as a String.
   String _serializeFlashMode(FlashMode flashMode) {
     switch (flashMode) {

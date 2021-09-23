@@ -252,6 +252,11 @@ abstract class CameraPlatform extends PlatformInterface {
     throw UnimplementedError('buildView() has not been implemented.');
   }
 
+  /// todo: this is a temp method
+  Future<void> switchFilter(int cameraId) {
+    throw UnimplementedError('switchFilter() is not implemented.');
+  }
+
   /// Releases the resources of this camera.
   Future<void> dispose(int cameraId) {
     throw UnimplementedError('dispose() is not implemented.');

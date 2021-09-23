@@ -795,6 +795,16 @@ class CameraController extends ValueNotifier<CameraValue> {
     }
   }
 
+  /// Switch filter
+  /// todo: this is temp method
+  Future<void> switchFilter() async {
+    try {
+      await CameraPlatform.instance.switchFilter(_cameraId);
+    } on PlatformException catch (e) {
+      throw CameraException(e.code, e.message);
+    }
+  }
+
   /// Releases the resources of this camera.
   @override
   Future<void> dispose() async {

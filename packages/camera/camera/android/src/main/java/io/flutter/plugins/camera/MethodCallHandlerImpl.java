@@ -350,6 +350,12 @@ final class MethodCallHandlerImpl implements MethodChannel.MethodCallHandler {
           result.success(null);
           break;
         }
+      case "switchFilter":
+        {
+          camera.switchFilter();
+          result.success(null);
+          break;
+        }
       case "dispose":
         {
           if (camera != null) {

@@ -22,8 +22,8 @@ flutter:
         default_package: camera_web
 
 dependencies:
-  camera_platform_interface: ^2.1.0
-  camera_web: ^0.2.1
+  camera_platform_interface:
+    path: /Users/kevin-ee/apps/plugins/packages/camera/camera_platform_interface
   flutter:
     sdk: flutter
   pedantic: ^1.10.0

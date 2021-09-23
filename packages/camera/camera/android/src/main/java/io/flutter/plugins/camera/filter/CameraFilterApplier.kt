@@ -47,14 +47,20 @@ class CameraFilterApplier(
     glThread = GLThread(WeakReference(this), width, height)
     glThread.start()
 
-    cameraFilter = CameraFilter(context)
+    cameraFilter = CameraFilter(context, width, height)
     triangle = Triangle(width, height)
+  }
+
+  fun switchFilter() {
+    if (cameraFilter.filterFlag == 0) {
+      cameraFilter.filterFlag = 1
+    } else {
+      cameraFilter.filterFlag = 0
+    }
   }
 
   // Called from GLThread
   fun onOutputEglSurfaceCreated() {
-    GLES20.glClearColor(1f, 1f, 1f, 1f)
-
     GLES20.glGenTextures(inputTextureName.size, inputTextureName, 0)
     inputSurfaceTexture = SurfaceTexture(inputTextureName[0])
     inputSurfaceTexture.setDefaultBufferSize(width, height)
@@ -71,7 +77,6 @@ class CameraFilterApplier(
   fun onDrawFrame() {
     inputSurfaceTexture.updateTexImage()
 
-    GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT or GLES20.GL_DEPTH_BUFFER_BIT)
     GLES20.glViewport(0, 0, width, height)
 
     cameraFilter.onDrawFrame()

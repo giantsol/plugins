@@ -1036,6 +1036,10 @@ class Camera
         });
   }
 
+  public void switchFilter() {
+    cameraFilterApplier.switchFilter();
+  }
+
   /**
    * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
    * still image is ready to be saved.
