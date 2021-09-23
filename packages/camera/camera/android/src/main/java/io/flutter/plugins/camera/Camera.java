@@ -58,6 +58,7 @@ import io.flutter.plugins.camera.features.resolution.ResolutionPreset;
 import io.flutter.plugins.camera.features.sensororientation.DeviceOrientationManager;
 import io.flutter.plugins.camera.features.sensororientation.SensorOrientationFeature;
 import io.flutter.plugins.camera.features.zoomlevel.ZoomLevelFeature;
+import io.flutter.plugins.camera.filter.CameraFilter;
 import io.flutter.plugins.camera.media.MediaRecorderBuilder;
 import io.flutter.plugins.camera.types.CameraCaptureProperties;
 import io.flutter.plugins.camera.types.CaptureTimeoutsWrapper;
@@ -135,6 +136,8 @@ class Camera
 
   private MethodChannel.Result flutterResult;
 
+  private final CameraFilter cameraFilter;
+
   public Camera(
       final Activity activity,
       final SurfaceTextureEntry flutterTexture,
@@ -164,6 +167,8 @@ class Camera
     cameraCaptureCallback = CameraCaptureCallback.create(this, captureTimeouts, captureProps);
 
     startBackgroundThread();
+
+    cameraFilter = new CameraFilter(flutterTexture, cameraFeatures);
   }
 
   @Override
@@ -323,20 +328,30 @@ class Camera
   private void createCaptureSession(
       int templateType, Runnable onSuccessCallback, Surface... surfaces)
       throws CameraAccessException {
+    if (cameraFilter.getInputSurface() == null) {
+      Log.i(TAG, "Delaying createCaptureSession due to cameraFilter.getInputSurface() == null");
+      new Handler(Looper.getMainLooper()).post(() -> {
+        try {
+          createCaptureSession(templateType, onSuccessCallback, surfaces);
+        } catch (CameraAccessException e) {
+          e.printStackTrace();
+        }
+      });
+
+      return;
+    }
+
+    // This is always non-null here.
+    final Surface cameraFilterInputSurface = cameraFilter.getInputSurface();
+
     // Close any existing capture session.
     closeCaptureSession();
 
     // Create a new capture builder.
     previewRequestBuilder = cameraDevice.createCaptureRequest(templateType);
 
-    // Build Flutter surface to render to.
-    ResolutionFeature resolutionFeature = cameraFeatures.getResolution();
-    SurfaceTexture surfaceTexture = flutterTexture.surfaceTexture();
-    surfaceTexture.setDefaultBufferSize(
-        resolutionFeature.getPreviewSize().getWidth(),
-        resolutionFeature.getPreviewSize().getHeight());
-    Surface flutterSurface = new Surface(surfaceTexture);
-    previewRequestBuilder.addTarget(flutterSurface);
+    // Render to cameraFilter's input surface.
+    previewRequestBuilder.addTarget(cameraFilterInputSurface);
 
     List<Surface> remainingSurfaces = Arrays.asList(surfaces);
     if (templateType != CameraDevice.TEMPLATE_PREVIEW) {
@@ -381,7 +396,7 @@ class Camera
     if (VERSION.SDK_INT >= VERSION_CODES.P) {
       // Collect all surfaces to render to.
       List<OutputConfiguration> configs = new ArrayList<>();
-      configs.add(new OutputConfiguration(flutterSurface));
+      configs.add(new OutputConfiguration(cameraFilterInputSurface));
       for (Surface surface : remainingSurfaces) {
         configs.add(new OutputConfiguration(surface));
       }
@@ -389,7 +404,7 @@ class Camera
     } else {
       // Collect all surfaces to render to.
       List<Surface> surfaceList = new ArrayList<>();
-      surfaceList.add(flutterSurface);
+      surfaceList.add(cameraFilterInputSurface);
       surfaceList.addAll(remainingSurfaces);
       createCaptureSession(surfaceList, callback);
     }
@@ -585,6 +600,10 @@ class Camera
       // Ignore exception in case the thread has already started.
     }
     backgroundHandler = HandlerFactory.create(backgroundHandlerThread.getLooper());
+
+    if (cameraFilter != null) {
+      cameraFilter.onResume();
+    }
   }
 
   /** Stops the background thread and its {@link Handler}. */
@@ -599,6 +618,10 @@ class Camera
     }
     backgroundHandlerThread = null;
     backgroundHandler = null;
+
+    if (cameraFilter != null) {
+      cameraFilter.onPause();
+    }
   }
 
   /** Start capturing a picture, doing autofocus first. */
@@ -1118,6 +1141,8 @@ class Camera
     close();
     flutterTexture.release();
     getDeviceOrientationManager().stop();
+
+    cameraFilter.release();
   }
 
   /** Factory class that assists in creating a {@link HandlerThread} instance. */
