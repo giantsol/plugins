@@ -70,7 +70,7 @@ import io.flutter.plugins.camera.features.resolution.ResolutionPreset;
 import io.flutter.plugins.camera.features.sensororientation.DeviceOrientationManager;
 import io.flutter.plugins.camera.features.sensororientation.SensorOrientationFeature;
 import io.flutter.plugins.camera.features.zoomlevel.ZoomLevelFeature;
-import io.flutter.plugins.camera.filter.CameraFilter;
+import io.flutter.plugins.camera.filter.CameraFilterApplier;
 import io.flutter.plugins.camera.media.MediaRecorderBuilder;
 import io.flutter.plugins.camera.types.CameraCaptureProperties;
 import io.flutter.plugins.camera.types.CaptureTimeoutsWrapper;
@@ -138,7 +138,7 @@ class Camera
 
   private MethodChannel.Result flutterResult;
 
-  private final CameraFilter cameraFilter;
+  private final CameraFilterApplier cameraFilterApplier;
 
   public Camera(
       final Activity activity,
@@ -170,7 +170,7 @@ class Camera
 
     startBackgroundThread();
 
-    cameraFilter = new CameraFilter(applicationContext, flutterTexture, cameraFeatures);
+    cameraFilterApplier = new CameraFilterApplier(applicationContext, flutterTexture, cameraFeatures);
   }
 
   @Override
@@ -330,8 +330,8 @@ class Camera
   private void createCaptureSession(
       int templateType, Runnable onSuccessCallback, Surface... surfaces)
       throws CameraAccessException {
-    if (cameraFilter.getInputSurface() == null) {
-      Log.i(TAG, "Delaying createCaptureSession due to cameraFilter.getInputSurface() == null");
+    if (cameraFilterApplier.getInputSurface() == null) {
+      Log.i(TAG, "Delaying createCaptureSession due to cameraFilterApplier.getInputSurface() == null");
       new Handler(Looper.getMainLooper()).post(() -> {
         try {
           createCaptureSession(templateType, onSuccessCallback, surfaces);
@@ -344,7 +344,7 @@ class Camera
     }
 
     // This is always non-null here.
-    final Surface cameraFilterInputSurface = cameraFilter.getInputSurface();
+    final Surface cameraFilterInputSurface = cameraFilterApplier.getInputSurface();
 
     // Close any existing capture session.
     closeCaptureSession();
@@ -352,7 +352,7 @@ class Camera
     // Create a new capture builder.
     previewRequestBuilder = cameraDevice.createCaptureRequest(templateType);
 
-    // Render to cameraFilter's input surface.
+    // Render to cameraFilterApplier's input surface.
     previewRequestBuilder.addTarget(cameraFilterInputSurface);
 
     List<Surface> remainingSurfaces = Arrays.asList(surfaces);
@@ -603,8 +603,8 @@ class Camera
     }
     backgroundHandler = HandlerFactory.create(backgroundHandlerThread.getLooper());
 
-    if (cameraFilter != null) {
-      cameraFilter.onResume();
+    if (cameraFilterApplier != null) {
+      cameraFilterApplier.onResume();
     }
   }
 
@@ -621,8 +621,8 @@ class Camera
     backgroundHandlerThread = null;
     backgroundHandler = null;
 
-    if (cameraFilter != null) {
-      cameraFilter.onPause();
+    if (cameraFilterApplier != null) {
+      cameraFilterApplier.onPause();
     }
   }
 
@@ -1144,7 +1144,7 @@ class Camera
     flutterTexture.release();
     getDeviceOrientationManager().stop();
 
-    cameraFilter.release();
+    cameraFilterApplier.release();
   }
 
   /** Factory class that assists in creating a {@link HandlerThread} instance. */

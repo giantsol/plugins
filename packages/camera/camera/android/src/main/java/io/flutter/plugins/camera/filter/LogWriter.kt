@@ -5,6 +5,10 @@ import java.io.Writer
 
 
 class LogWriter : Writer() {
+  companion object {
+    private const val TAG = "LogWriter"
+  }
+
   private val builder = StringBuilder()
 
   override fun close() {
@@ -28,7 +32,7 @@ class LogWriter : Writer() {
 
   private fun flushBuilder() {
     if (builder.isNotEmpty()) {
-      Log.v("CameraFilter", builder.toString())
+      Log.v(TAG, builder.toString())
       builder.delete(0, builder.length)
     }
   }

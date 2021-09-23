@@ -86,8 +86,6 @@ class Triangle(
     // Add program to OpenGL ES environment
     GLES20.glUseProgram(program)
 
-    GLES20.glViewport(0, 0, width, height)
-
     // get handle to vertex shader's vPosition member
     positionHandle = GLES20.glGetAttribLocation(program, "vPosition").also {
       // Enable a handle to the triangle vertices
