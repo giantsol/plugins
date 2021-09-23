@@ -1,8 +1,11 @@
 package io.flutter.plugins.camera.filter
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.opengl.GLES20
+import android.opengl.GLUtils
 import android.util.Log
+import androidx.annotation.DrawableRes
 import androidx.annotation.RawRes
 import java.io.BufferedReader
 import java.io.InputStreamReader
@@ -35,14 +38,14 @@ object GLUtil {
     @RawRes fragmentShaderResId: Int,
   ): Int {
     val vertexShader =
-      loadShader(GLES20.GL_VERTEX_SHADER, loadShaderCodeAsString(context, vertexShaderResId))
+      loadShader(GLES20.GL_VERTEX_SHADER, loadResAsString(context, vertexShaderResId))
     if (vertexShader == 0) {
       Log.e(TAG, "failed to load vertexShader")
       return 0
     }
 
     val fragmentShader =
-      loadShader(GLES20.GL_FRAGMENT_SHADER, loadShaderCodeAsString(context, fragmentShaderResId))
+      loadShader(GLES20.GL_FRAGMENT_SHADER, loadResAsString(context, fragmentShaderResId))
     if (fragmentShader == 0) {
       Log.e(TAG, "failed to load fragmentShader")
       return 0
@@ -88,10 +91,10 @@ object GLUtil {
     return shader
   }
 
-  private fun loadShaderCodeAsString(context: Context, @RawRes shaderResId: Int): String {
+  private fun loadResAsString(context: Context, @RawRes resId: Int): String {
     val builder = StringBuilder()
 
-    val inputStream = context.resources.openRawResource(shaderResId)
+    val inputStream = context.resources.openRawResource(resId)
     val reader = InputStreamReader(inputStream)
     val br = BufferedReader(reader)
 
@@ -103,5 +106,37 @@ object GLUtil {
     }
 
     return builder.toString()
+  }
+
+  fun loadLUTDrawableAsTexture(context: Context, @DrawableRes resId: Int): Int {
+    val textureName = IntArray(1)
+    GLES20.glGenTextures(textureName.size, textureName, 0)
+
+    val options = BitmapFactory.Options()
+    options.inScaled = false
+    val lutBitmap = BitmapFactory.decodeResource(context.resources, resId, options)
+    if (lutBitmap == null) {
+      GLES20.glDeleteTextures(textureName.size, textureName, 0)
+      Log.e(TAG, "bitmap cannot be decoded from resource id: $resId")
+      return 0
+    }
+
+    // Bind texture to OpenGL
+    GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureName[0])
+
+    // Set the texture filtering method when zooming in and zooming out.
+    // It must be set, otherwise the texture will be all black.
+    GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST.toFloat())
+    GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST.toFloat())
+
+    // Load the bitmap into OpenGL and copy it to the currently bound texture object
+    GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, lutBitmap, 0)
+    // Release the bitmap resource (the bitmap data has been copied to the texture above)
+    lutBitmap.recycle()
+
+    // Unbind the current texture to prevent the texture from being changed in other places
+    GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
+
+    return textureName[0]
   }
 }

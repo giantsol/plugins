@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.SurfaceTexture
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
-import android.util.Log
 import android.view.Surface
 import io.flutter.plugins.camera.R
 import io.flutter.plugins.camera.features.CameraFeatures
@@ -27,6 +26,8 @@ class CameraFilter(
     private const val VERTEX_SHADER_ATTRIB_TEXTURE_COORD_SIZE = 2
 
     private const val FRAGMENT_SHADER_UNIFORM_TEXTURE_NAME = "s_texture"
+    private const val FRAGMENT_SHADER_UNIFORM_LUT_TEXTURE_NAME = "textureLUT"
+    private const val FRAGMENT_SHADER_UNIFORM_FILTER_FLAG_NAME = "filterFlag"
   }
 
   val outputSurface: Surface
@@ -65,6 +66,8 @@ class CameraFilter(
 
   private var program: Int = 0
 
+  private var lutTextureName: Int = 0
+
   init {
     val resolutionFeature = cameraFeatures.resolution
     val surfaceTexture = surfaceTextureEntry.surfaceTexture()
@@ -93,7 +96,9 @@ class CameraFilter(
 
     program = GLUtil.createAndLinkProgram(context, R.raw.vertex_shader, R.raw.fragment_shader)
 
-    GLES20.glClearColor(1f, 1f, 1f, 0f)
+    lutTextureName = GLUtil.loadLUTDrawableAsTexture(context, R.drawable.amatorka)
+
+    GLES20.glClearColor(1f, 1f, 1f, 1f)
   }
 
   // Called from GLThread
@@ -140,10 +145,23 @@ class CameraFilter(
     val uTextureLoc = GLES20.glGetUniformLocation(program, FRAGMENT_SHADER_UNIFORM_TEXTURE_NAME)
     GLES20.glUniform1i(uTextureLoc, 0)
 
+    val uFilterFlagLoc = GLES20.glGetUniformLocation(program, FRAGMENT_SHADER_UNIFORM_FILTER_FLAG_NAME)
+    if (lutTextureName > 0) {
+      GLES20.glActiveTexture(GLES20.GL_TEXTURE0 + 1)
+      GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, lutTextureName)
+      val uLUTTextureLoc = GLES20.glGetUniformLocation(program, FRAGMENT_SHADER_UNIFORM_LUT_TEXTURE_NAME)
+      GLES20.glUniform1i(uLUTTextureLoc, 1)
+      GLES20.glUniform1i(uFilterFlagLoc, 1)
+    } else {
+      GLES20.glUniform1i(uFilterFlagLoc, 0)
+    }
+
     GLES20.glDrawArrays(GLES20.GL_TRIANGLE_FAN, 0, vertex.size / 3)
 
     GLES20.glDisableVertexAttribArray(vertexLoc)
     GLES20.glDisableVertexAttribArray(textureLoc)
+    GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0)
+    GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
 
     triangle.onDrawFrame()
   }
