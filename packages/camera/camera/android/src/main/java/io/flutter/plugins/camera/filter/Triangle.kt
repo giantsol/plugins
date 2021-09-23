@@ -3,8 +3,6 @@ package io.flutter.plugins.camera.filter
 import android.opengl.GLES20
 import android.opengl.Matrix
 import android.os.SystemClock
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.nio.FloatBuffer
 
 
@@ -15,16 +13,6 @@ class Triangle(
   companion object {
     // number of coordinates per vertex in this array
     const val COORDS_PER_VERTEX = 3
-
-    private fun loadShader(type: Int, shaderCode: String): Int {
-      // create a vertex shader type (GLES20.GL_VERTEX_SHADER)
-      // or a fragment shader type (GLES20.GL_FRAGMENT_SHADER)
-      return GLES20.glCreateShader(type).also { shader ->
-        // add the source code to the shader and compile it
-        GLES20.glShaderSource(shader, shaderCode)
-        GLES20.glCompileShader(shader)
-      }
-    }
   }
 
   private val triangleCoords = floatArrayOf(     // in counterclockwise order:
@@ -36,20 +24,7 @@ class Triangle(
   // Set color with red, green, blue and alpha (opacity) values
   private val color = floatArrayOf(0.63671875f, 0.76953125f, 0.22265625f, 1.0f)
 
-  private val vertexBuffer: FloatBuffer =
-    // (number of coordinate values * 4 bytes per float)
-    ByteBuffer.allocateDirect(triangleCoords.size * 4).run {
-      // use the device hardware's native byte order
-      order(ByteOrder.nativeOrder())
-
-      // create a floating point buffer from the ByteBuffer
-      asFloatBuffer().apply {
-        // add the coordinates to the FloatBuffer
-        put(triangleCoords)
-        // set the buffer to read the first coordinate
-        position(0)
-      }
-    }
+  private val vertexBuffer: FloatBuffer = GLUtil.getFloatBuffer(triangleCoords)
 
   private val vertexShaderCode =
   // This matrix member variable provides a hook to manipulate
@@ -88,8 +63,8 @@ class Triangle(
   private val rotationMatrix = FloatArray(16)
 
   fun onOutputEglSurfaceCreated() {
-    val vertexShader: Int = loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
-    val fragmentShader: Int = loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode)
+    val vertexShader: Int = GLUtil.loadShader(GLES20.GL_VERTEX_SHADER, vertexShaderCode)
+    val fragmentShader: Int = GLUtil.loadShader(GLES20.GL_FRAGMENT_SHADER, fragmentShaderCode)
 
     // create empty OpenGL ES Program
     program = GLES20.glCreateProgram().also {
