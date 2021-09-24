@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import android.opengl.GLES20
 import android.opengl.GLUtils
+import android.opengl.Matrix
 import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.annotation.RawRes
@@ -138,5 +139,18 @@ object GLUtil {
     GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0)
 
     return textureName[0]
+  }
+
+  fun flipMatrix(matrix: FloatArray, x: Boolean, y: Boolean): FloatArray {
+    if (x || y) {
+      Matrix.scaleM(
+        matrix,
+        0,
+        if (x) -1f else 1f,
+        if (y) -1f else 1f,
+        1f
+      )
+    }
+    return matrix
   }
 }

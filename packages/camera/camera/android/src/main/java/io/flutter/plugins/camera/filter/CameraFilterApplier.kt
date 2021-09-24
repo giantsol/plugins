@@ -20,6 +20,7 @@ class CameraFilterApplier(
   }
 
   val outputSurface: Surface
+
   private val width: Int
   private val height: Int
 
@@ -27,13 +28,15 @@ class CameraFilterApplier(
   val eglContextFactory = EGLContextFactoryImpl(EGL_CONTEXT_CLIENT_VERSION)
   val eglWindowSurfaceFactory = EGLWindowSurfaceFactoryImpl()
 
+  // Thread that will handle all EGL setups and drawings.
   private val glThread: GLThread
 
-  private val inputTextureName = IntArray(1)
+  private val inputTextureIdArray = IntArray(1)
   private lateinit var inputSurfaceTexture: SurfaceTexture
   var inputSurface: Surface? = null
 
-  private val cameraFilter: CameraFilter
+  private val cameraToFrameBuffer: CameraToFrameBuffer
+  private val colorFilter: ColorFilter
   private val triangle: Triangle
 
   init {
@@ -47,29 +50,32 @@ class CameraFilterApplier(
     glThread = GLThread(WeakReference(this), width, height)
     glThread.start()
 
-    cameraFilter = CameraFilter(context, width, height)
+    cameraToFrameBuffer = CameraToFrameBuffer(context, width, height)
+    colorFilter = ColorFilter(context)
     triangle = Triangle(width, height)
   }
 
   fun switchFilter() {
-    if (cameraFilter.filterFlag == 0) {
-      cameraFilter.filterFlag = 1
+    if (colorFilter.filterFlag == 0) {
+      colorFilter.filterFlag = 1
     } else {
-      cameraFilter.filterFlag = 0
+      colorFilter.filterFlag = 0
     }
   }
 
   // Called from GLThread
   fun onOutputEglSurfaceCreated() {
-    GLES20.glGenTextures(inputTextureName.size, inputTextureName, 0)
-    inputSurfaceTexture = SurfaceTexture(inputTextureName[0])
+    GLES20.glGenTextures(inputTextureIdArray.size, inputTextureIdArray, 0)
+    inputSurfaceTexture = SurfaceTexture(inputTextureIdArray[0])
     inputSurfaceTexture.setDefaultBufferSize(width, height)
     inputSurfaceTexture.setOnFrameAvailableListener {
       glThread.requestRender()
     }
     inputSurface = Surface(inputSurfaceTexture)
 
-    cameraFilter.onOutputEglSurfaceCreated(inputTextureName[0])
+    // Order matters.
+    cameraToFrameBuffer.onOutputEglSurfaceCreated(inputTextureIdArray[0])
+    colorFilter.onOutputEglSurfaceCreated(cameraToFrameBuffer.frameBufferTextureId)
     triangle.onOutputEglSurfaceCreated()
   }
 
@@ -79,7 +85,9 @@ class CameraFilterApplier(
 
     GLES20.glViewport(0, 0, width, height)
 
-    cameraFilter.onDrawFrame()
+    // Order matters.
+    cameraToFrameBuffer.onDrawFrame()
+    colorFilter.onDrawFrame()
     triangle.onDrawFrame()
   }
 
