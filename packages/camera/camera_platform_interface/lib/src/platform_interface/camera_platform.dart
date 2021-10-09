@@ -53,7 +53,8 @@ abstract class CameraPlatform extends PlatformInterface {
   /// Creates an uninitialized camera instance and returns the cameraId.
   Future<int> createCamera(
     CameraDescription cameraDescription,
-    ResolutionPreset? resolutionPreset, {
+    ResolutionPreset? resolutionPreset,
+    double saveAspectRatio, {
     bool enableAudio = false,
   }) {
     throw UnimplementedError('createCamera() is not implemented.');
@@ -254,6 +255,11 @@ abstract class CameraPlatform extends PlatformInterface {
 
   /// todo: this is a temp method
   Future<void> switchFilter(int cameraId) {
+    throw UnimplementedError('switchFilter() is not implemented.');
+  }
+
+  /// Sets the save aspect ratio.
+  Future<void> setSaveAspectRatio(int cameraId, double saveAspectRatio) {
     throw UnimplementedError('switchFilter() is not implemented.');
   }
 

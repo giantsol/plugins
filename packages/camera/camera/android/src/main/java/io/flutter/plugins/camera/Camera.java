@@ -139,6 +139,7 @@ class Camera
   private MethodChannel.Result flutterResult;
 
   private final CameraFilterApplier cameraFilterApplier;
+  double saveAspectRatio;
 
   public Camera(
       final Activity activity,
@@ -147,6 +148,7 @@ class Camera
       final DartMessenger dartMessenger,
       final CameraProperties cameraProperties,
       final ResolutionPreset resolutionPreset,
+      final double saveAspectRatio,
       final boolean enableAudio) {
 
     if (activity == null) {
@@ -171,6 +173,7 @@ class Camera
     startBackgroundThread();
 
     cameraFilterApplier = new CameraFilterApplier(applicationContext, flutterTexture, cameraFeatures);
+    this.saveAspectRatio = saveAspectRatio;
   }
 
   @Override
@@ -1053,6 +1056,7 @@ class Camera
             // Use acquireNextImage since image reader is only for one image.
             reader.acquireNextImage(),
             captureFile,
+            saveAspectRatio,
             new ImageSaver.Callback() {
               @Override
               public void onComplete(String absolutePath) {

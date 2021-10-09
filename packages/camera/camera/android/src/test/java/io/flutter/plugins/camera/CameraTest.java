@@ -102,6 +102,7 @@ public class CameraTest {
             mockDartMessenger,
             mockCameraProperties,
             resolutionPreset,
+            1,
             enableAudio);
 
     TestUtils.setPrivateField(camera, "captureSession", mockCaptureSession);
@@ -145,6 +146,7 @@ public class CameraTest {
             mockDartMessenger,
             mockCameraProperties,
             resolutionPreset,
+            1,
             enableAudio);
 
     verify(mockCameraFeatureFactory, times(1))

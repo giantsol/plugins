@@ -222,7 +222,8 @@ class CameraController extends ValueNotifier<CameraValue> {
   /// Creates a new camera controller in an uninitialized state.
   CameraController(
     this.description,
-    this.resolutionPreset, {
+    this.resolutionPreset,
+    this.saveAspectRatio, {
     this.enableAudio = true,
     this.imageFormatGroup,
   }) : super(const CameraValue.uninitialized());
@@ -245,6 +246,9 @@ class CameraController extends ValueNotifier<CameraValue> {
   ///
   /// When null the imageFormat will fallback to the platforms default.
   final ImageFormatGroup? imageFormatGroup;
+
+  /// The aspect ratio this camera should apply when saving photo/video.
+  final double saveAspectRatio;
 
   /// The id of a camera that hasn't been initialized.
   @visibleForTesting
@@ -289,6 +293,7 @@ class CameraController extends ValueNotifier<CameraValue> {
       _cameraId = await CameraPlatform.instance.createCamera(
         description,
         resolutionPreset,
+        saveAspectRatio,
         enableAudio: enableAudio,
       );
 
@@ -800,6 +805,15 @@ class CameraController extends ValueNotifier<CameraValue> {
   Future<void> switchFilter() async {
     try {
       await CameraPlatform.instance.switchFilter(_cameraId);
+    } on PlatformException catch (e) {
+      throw CameraException(e.code, e.message);
+    }
+  }
+
+  /// Sets the save aspect ratio.
+  Future<void> setSaveAspectRatio(double saveAspectRatio) async {
+    try {
+      await CameraPlatform.instance.setSaveAspectRatio(_cameraId, saveAspectRatio);
     } on PlatformException catch (e) {
       throw CameraException(e.code, e.message);
     }

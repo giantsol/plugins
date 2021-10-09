@@ -81,7 +81,8 @@ class MethodChannelCamera extends CameraPlatform {
   @override
   Future<int> createCamera(
     CameraDescription cameraDescription,
-    ResolutionPreset? resolutionPreset, {
+    ResolutionPreset? resolutionPreset,
+    double saveAspectRatio, {
     bool enableAudio = false,
   }) async {
     try {
@@ -91,6 +92,7 @@ class MethodChannelCamera extends CameraPlatform {
         'resolutionPreset': resolutionPreset != null
             ? _serializeResolutionPreset(resolutionPreset)
             : null,
+        'saveAspectRatio': saveAspectRatio,
         'enableAudio': enableAudio,
       });
 
@@ -426,6 +428,16 @@ class MethodChannelCamera extends CameraPlatform {
       'switchFilter',
       <String, dynamic> {
         'cameraId': cameraId,
+      },
+    );
+
+  @override
+  Future<void> setSaveAspectRatio(int cameraId, double saveAspectRatio) =>
+    _channel.invokeMethod<void>(
+      'setSaveAspectRatio',
+      <String, dynamic> {
+        'cameraId': cameraId,
+        'saveAspectRatio': saveAspectRatio,
       },
     );
 

@@ -4,14 +4,23 @@
 
 package io.flutter.plugins.camera;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.media.Image;
+import android.util.Log;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+
+import static java.lang.Math.max;
 
 /** Saves a JPEG {@link Image} into the specified {@link File}. */
 public class ImageSaver implements Runnable {
@@ -25,6 +34,8 @@ public class ImageSaver implements Runnable {
   /** Used to report the status of the save action. */
   private final Callback callback;
 
+  private final double aspectRatio;
+
   /**
    * Creates an instance of the ImageSaver runnable
    *
@@ -32,10 +43,11 @@ public class ImageSaver implements Runnable {
    * @param file - The file to save the image to
    * @param callback - The callback that is run on completion, or when an error is encountered.
    */
-  ImageSaver(@NonNull Image image, @NonNull File file, @NonNull Callback callback) {
+  ImageSaver(@NonNull Image image, @NonNull File file, double aspectRatio, @NonNull Callback callback) {
     this.image = image;
     this.file = file;
     this.callback = callback;
+    this.aspectRatio = aspectRatio;
   }
 
   @Override
@@ -43,6 +55,41 @@ public class ImageSaver implements Runnable {
     ByteBuffer buffer = image.getPlanes()[0].getBuffer();
     byte[] bytes = new byte[buffer.remaining()];
     buffer.get(bytes);
+
+    Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+    final int imageWidth = bitmap.getHeight();
+    final int imageHeight = bitmap.getWidth();
+    int realWidth = imageWidth;
+    int realHeight = (int) (realWidth / aspectRatio);
+    final int changedHeightDelta = realHeight - imageHeight;
+    int verticalCutOff = 0;
+    int horizontalCutOff = 0;
+    float zoom = 1;
+    if (changedHeightDelta <= 0) {
+      verticalCutOff = -changedHeightDelta / 2;
+    } else {
+      zoom = (float) realHeight / imageHeight;
+      realWidth = (int) (imageWidth * zoom);
+      final int changedWidthDelta = realWidth - imageWidth;
+      horizontalCutOff = max(0, changedWidthDelta / 2);
+    }
+
+    Matrix matrix = new Matrix();
+    matrix.postRotate(90);
+
+    bitmap = Bitmap.createBitmap(
+        bitmap,
+        verticalCutOff,
+        horizontalCutOff,
+        bitmap.getWidth() - verticalCutOff * 2,
+        bitmap.getHeight() - horizontalCutOff * 2,
+        matrix,
+        true
+    );
+    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bos);
+    bytes = bos.toByteArray();
+
     FileOutputStream output = null;
     try {
       output = FileOutputStreamFactory.create(file);
