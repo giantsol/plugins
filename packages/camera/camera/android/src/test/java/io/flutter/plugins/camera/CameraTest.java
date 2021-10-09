@@ -18,6 +18,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import android.app.Activity;
+import android.content.Context;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraMetadata;
@@ -159,7 +160,7 @@ public class CameraTest {
     verify(mockCameraFeatureFactory, times(1)).createFpsRangeFeature(mockCameraProperties);
     verify(mockCameraFeatureFactory, times(1)).createNoiseReductionFeature(mockCameraProperties);
     verify(mockCameraFeatureFactory, times(1))
-        .createResolutionFeature(mockCameraProperties, resolutionPreset, cameraName);
+        .createResolutionFeature(mockActivity, mockCameraProperties, resolutionPreset, cameraName);
     verify(mockCameraFeatureFactory, times(1)).createZoomLevelFeature(mockCameraProperties);
     assertNotNull("should create a camera", camera);
   }
@@ -251,8 +252,9 @@ public class CameraTest {
 
   @Test
   public void getRecordingProfile() {
+    final Activity mockActivity = mock(Activity.class);
     ResolutionFeature mockResolutionFeature =
-        mockCameraFeatureFactory.createResolutionFeature(mockCameraProperties, null, null);
+        mockCameraFeatureFactory.createResolutionFeature(mockActivity, mockCameraProperties, null, null);
     CamcorderProfile mockCamcorderProfile = mock(CamcorderProfile.class);
 
     when(mockResolutionFeature.getRecordingProfile()).thenReturn(mockCamcorderProfile);
@@ -868,6 +870,7 @@ public class CameraTest {
 
     @Override
     public ResolutionFeature createResolutionFeature(
+        Context context,
         @NonNull CameraProperties cameraProperties,
         ResolutionPreset initialSetting,
         String cameraName) {

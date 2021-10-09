@@ -9,6 +9,7 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
+import android.app.Activity;
 import android.media.CamcorderProfile;
 import io.flutter.plugins.camera.CameraProperties;
 import org.junit.After;
@@ -80,27 +81,30 @@ public class ResolutionFeatureTest {
 
   @Test
   public void getDebugName_shouldReturnTheNameOfTheFeature() {
+    final Activity mockActivity = mock(Activity.class);
     CameraProperties mockCameraProperties = mock(CameraProperties.class);
     ResolutionFeature resolutionFeature =
-        new ResolutionFeature(mockCameraProperties, ResolutionPreset.max, cameraName);
+        new ResolutionFeature(mockActivity, mockCameraProperties, ResolutionPreset.max, cameraName);
 
     assertEquals("ResolutionFeature", resolutionFeature.getDebugName());
   }
 
   @Test
   public void getValue_shouldReturnInitialValueWhenNotSet() {
+    final Activity mockActivity = mock(Activity.class);
     CameraProperties mockCameraProperties = mock(CameraProperties.class);
     ResolutionFeature resolutionFeature =
-        new ResolutionFeature(mockCameraProperties, ResolutionPreset.max, cameraName);
+        new ResolutionFeature(mockActivity, mockCameraProperties, ResolutionPreset.max, cameraName);
 
     assertEquals(ResolutionPreset.max, resolutionFeature.getValue());
   }
 
   @Test
   public void getValue_shouldEchoSetValue() {
+    final Activity mockActivity = mock(Activity.class);
     CameraProperties mockCameraProperties = mock(CameraProperties.class);
     ResolutionFeature resolutionFeature =
-        new ResolutionFeature(mockCameraProperties, ResolutionPreset.max, cameraName);
+        new ResolutionFeature(mockActivity, mockCameraProperties, ResolutionPreset.max, cameraName);
 
     resolutionFeature.setValue(ResolutionPreset.high);
 
@@ -109,9 +113,10 @@ public class ResolutionFeatureTest {
 
   @Test
   public void checkIsSupport_returnsTrue() {
+    final Activity mockActivity = mock(Activity.class);
     CameraProperties mockCameraProperties = mock(CameraProperties.class);
     ResolutionFeature resolutionFeature =
-        new ResolutionFeature(mockCameraProperties, ResolutionPreset.max, cameraName);
+        new ResolutionFeature(mockActivity, mockCameraProperties, ResolutionPreset.max, cameraName);
 
     assertTrue(resolutionFeature.checkIsSupported());
   }

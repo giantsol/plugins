@@ -38,7 +38,7 @@ vec4 lookupTable(vec4 color){
 void main(){
     vec4 tmpColor = texture(s_texture, v_texCoord);
     if (filterFlag == 0) {
-        grey(tmpColor);
+//        grey(tmpColor);
         outColor = tmpColor;
     } else {
         outColor = lookupTable(tmpColor);

@@ -37,13 +37,13 @@ class CameraFilterApplier(
 
   private val cameraToFrameBuffer: CameraToFrameBuffer
   private val colorFilter: ColorFilter
-  private val triangle: Triangle
+//  private val triangle: Triangle
 
   init {
     val resolutionFeature = cameraFeatures.resolution
     val outputSurfaceTexture = outputSurfaceTextureEntry.surfaceTexture()
-    width = resolutionFeature.previewSize.width
-    height = resolutionFeature.previewSize.height
+    width = resolutionFeature.captureSize.width
+    height = resolutionFeature.captureSize.height
     outputSurfaceTexture.setDefaultBufferSize(width, height)
     outputSurface = Surface(outputSurfaceTexture)
 
@@ -52,7 +52,7 @@ class CameraFilterApplier(
 
     cameraToFrameBuffer = CameraToFrameBuffer(context, width, height)
     colorFilter = ColorFilter(context)
-    triangle = Triangle(width, height)
+//    triangle = Triangle(width, height)
   }
 
   fun switchFilter() {
@@ -76,7 +76,7 @@ class CameraFilterApplier(
     // Order matters.
     cameraToFrameBuffer.onOutputEglSurfaceCreated(inputTextureIdArray[0])
     colorFilter.onOutputEglSurfaceCreated(cameraToFrameBuffer.frameBufferTextureId)
-    triangle.onOutputEglSurfaceCreated()
+//    triangle.onOutputEglSurfaceCreated()
   }
 
   // Called from GLThread
@@ -88,7 +88,7 @@ class CameraFilterApplier(
     // Order matters.
     cameraToFrameBuffer.onDrawFrame()
     colorFilter.onDrawFrame()
-    triangle.onDrawFrame()
+//    triangle.onDrawFrame()
   }
 
   // todo: we should call this when the outputSurface provided in the constructor becomes invalid

@@ -247,8 +247,8 @@ class Camera
     }
     imageStreamReader =
         ImageReader.newInstance(
-            resolutionFeature.getPreviewSize().getWidth(),
-            resolutionFeature.getPreviewSize().getHeight(),
+            resolutionFeature.getCaptureSize().getWidth(),
+            resolutionFeature.getCaptureSize().getHeight(),
             imageFormat,
             1);
 
@@ -263,8 +263,8 @@ class Camera
             try {
               startPreview();
               dartMessenger.sendCameraInitializedEvent(
-                  resolutionFeature.getPreviewSize().getWidth(),
-                  resolutionFeature.getPreviewSize().getHeight(),
+                  resolutionFeature.getCaptureSize().getWidth(),
+                  resolutionFeature.getCaptureSize().getHeight(),
                   cameraFeatures.getExposureLock().getValue(),
                   cameraFeatures.getAutoFocus().getValue(),
                   cameraFeatures.getExposurePoint().checkIsSupported(),

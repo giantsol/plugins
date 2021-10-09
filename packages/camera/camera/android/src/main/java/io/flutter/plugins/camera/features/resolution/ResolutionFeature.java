@@ -4,11 +4,19 @@
 
 package io.flutter.plugins.camera.features.resolution;
 
+import android.content.Context;
+import android.graphics.SurfaceTexture;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.CamcorderProfile;
+import android.util.Log;
 import android.util.Size;
 import androidx.annotation.VisibleForTesting;
 import io.flutter.plugins.camera.CameraProperties;
+import io.flutter.plugins.camera.CameraUtils;
 import io.flutter.plugins.camera.features.CameraFeature;
 
 /**
@@ -19,8 +27,8 @@ import io.flutter.plugins.camera.features.CameraFeature;
  * required to configure the resolution using the {@link android.hardware.camera2} API.
  */
 public class ResolutionFeature extends CameraFeature<ResolutionPreset> {
+  private final Context context;
   private Size captureSize;
-  private Size previewSize;
   private CamcorderProfile recordingProfile;
   private ResolutionPreset currentSetting;
   private int cameraId;
@@ -28,13 +36,15 @@ public class ResolutionFeature extends CameraFeature<ResolutionPreset> {
   /**
    * Creates a new instance of the {@link ResolutionFeature}.
    *
+   * @param context Context.
    * @param cameraProperties Collection of characteristics for the current camera device.
    * @param resolutionPreset Platform agnostic enum containing resolution information.
    * @param cameraName Camera identifier of the camera for which to configure the resolution.
    */
   public ResolutionFeature(
-      CameraProperties cameraProperties, ResolutionPreset resolutionPreset, String cameraName) {
+      Context context, CameraProperties cameraProperties, ResolutionPreset resolutionPreset, String cameraName) {
     super(cameraProperties);
+    this.context = context;
     this.currentSetting = resolutionPreset;
     try {
       this.cameraId = Integer.parseInt(cameraName, 10);
@@ -53,15 +63,6 @@ public class ResolutionFeature extends CameraFeature<ResolutionPreset> {
    */
   public CamcorderProfile getRecordingProfile() {
     return this.recordingProfile;
-  }
-
-  /**
-   * Gets the optimal preview size based on the configured resolution.
-   *
-   * @return The optimal preview size.
-   */
-  public Size getPreviewSize() {
-    return this.previewSize;
   }
 
   /**
@@ -171,6 +172,22 @@ public class ResolutionFeature extends CameraFeature<ResolutionPreset> {
     recordingProfile =
         getBestAvailableCamcorderProfileForResolutionPreset(cameraId, resolutionPreset);
     captureSize = new Size(recordingProfile.videoFrameWidth, recordingProfile.videoFrameHeight);
-    previewSize = computeBestPreviewSize(cameraId, resolutionPreset);
+
+    if (resolutionPreset == ResolutionPreset.max) {
+      try {
+        final CameraManager cameraManager = CameraUtils.getCameraManager(context);
+        final CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(String.valueOf(cameraId));
+        final StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+
+        Size[] sizes = map.getOutputSizes(SurfaceTexture.class);
+        for (Size size : sizes) {
+          if (size.getHeight() >= captureSize.getHeight() && size.getWidth() >= captureSize.getWidth()) {
+            captureSize = size;
+          }
+        }
+      } catch (Exception e) {
+        e.printStackTrace();
+      }
+    }
   }
 }
