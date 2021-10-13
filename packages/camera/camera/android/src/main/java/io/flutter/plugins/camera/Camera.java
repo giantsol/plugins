@@ -172,7 +172,7 @@ class Camera
 
     startBackgroundThread();
 
-    cameraFilterApplier = new CameraFilterApplier(applicationContext, flutterTexture, cameraFeatures);
+    cameraFilterApplier = new CameraFilterApplier(applicationContext, flutterTexture, cameraFeatures, cameraProperties);
     this.saveAspectRatio = saveAspectRatio;
   }
 

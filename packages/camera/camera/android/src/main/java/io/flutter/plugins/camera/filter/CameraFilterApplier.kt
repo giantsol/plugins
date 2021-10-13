@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.SurfaceTexture
 import android.opengl.GLES20
 import android.view.Surface
+import io.flutter.plugins.camera.CameraProperties
 import io.flutter.plugins.camera.features.CameraFeatures
 import io.flutter.view.TextureRegistry
 import java.lang.ref.WeakReference
@@ -13,6 +14,7 @@ class CameraFilterApplier(
   context: Context,
   outputSurfaceTextureEntry: TextureRegistry.SurfaceTextureEntry,
   cameraFeatures: CameraFeatures,
+  cameraProperties: CameraProperties,
 ) {
   // todo: declare OPENGL 3 in manifest
   companion object {
@@ -50,7 +52,7 @@ class CameraFilterApplier(
     glThread = GLThread(WeakReference(this), width, height)
     glThread.start()
 
-    cameraToFrameBuffer = CameraToFrameBuffer(context, width, height)
+    cameraToFrameBuffer = CameraToFrameBuffer(context, width, height, cameraProperties.lensFacing)
     colorFilter = ColorFilter(context)
 //    triangle = Triangle(width, height)
   }

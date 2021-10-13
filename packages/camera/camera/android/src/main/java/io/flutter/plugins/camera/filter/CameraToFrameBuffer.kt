@@ -1,6 +1,7 @@
 package io.flutter.plugins.camera.filter
 
 import android.content.Context
+import android.hardware.camera2.CameraMetadata
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import io.flutter.plugins.camera.R
@@ -10,6 +11,7 @@ class CameraToFrameBuffer(
   private val context: Context,
   private val width: Int,
   private val height: Int,
+  lensFacing: Int,
 ) {
   companion object {
     private const val VERTEX_SHADER_POSITION_NAME = "a_Position"
@@ -28,11 +30,18 @@ class CameraToFrameBuffer(
     1f, 1f, 0f, // upper right
   )
 
-  private val textureCoord = floatArrayOf(
+  private val backCameraTextureCoord = floatArrayOf(
     1.0f, 1.0f,
     0.0f, 1.0f,
     0.0f, 0.0f,
     1.0f, 0.0f,
+  )
+
+  private val frontCameraTextureCoord = floatArrayOf(
+    0.0f, 1.0f,
+    1.0f, 1.0f,
+    1.0f, 0.0f,
+    0.0f, 0.0f,
   )
 
   private val matrix: FloatArray = floatArrayOf(
@@ -43,7 +52,8 @@ class CameraToFrameBuffer(
   )
 
   private val vertexBuffer = GLUtil.getFloatBuffer(vertex)
-  private val textureCoordBuffer = GLUtil.getFloatBuffer(textureCoord)
+  private var textureCoordBuffer =
+    GLUtil.getFloatBuffer(if (lensFacing == CameraMetadata.LENS_FACING_BACK) backCameraTextureCoord else frontCameraTextureCoord)
 
   private var program: Int = 0
   private var vertexPositionHandle: Int = 0
@@ -61,7 +71,8 @@ class CameraToFrameBuffer(
   fun onOutputEglSurfaceCreated(inputTextureId: Int) {
     this.inputTextureId = inputTextureId
 
-    program = GLUtil.createAndLinkProgram(context, R.raw.vertex_shader, R.raw.camera_to_framebuffer_fragment_shader)
+    program =
+      GLUtil.createAndLinkProgram(context, R.raw.vertex_shader, R.raw.camera_to_framebuffer_fragment_shader)
     vertexPositionHandle = GLES20.glGetAttribLocation(program, VERTEX_SHADER_POSITION_NAME)
     vertexTexCoordHandle =
       GLES20.glGetAttribLocation(program, VERTEX_SHADER_TEXTURE_COORD_NAME)
