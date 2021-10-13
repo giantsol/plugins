@@ -7,6 +7,7 @@ package io.flutter.plugins.camera;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.hardware.camera2.CameraMetadata;
 import android.media.Image;
 import android.util.Log;
 
@@ -36,6 +37,8 @@ public class ImageSaver implements Runnable {
 
   private final double aspectRatio;
 
+  private final int lensFacing;
+
   /**
    * Creates an instance of the ImageSaver runnable
    *
@@ -43,11 +46,12 @@ public class ImageSaver implements Runnable {
    * @param file - The file to save the image to
    * @param callback - The callback that is run on completion, or when an error is encountered.
    */
-  ImageSaver(@NonNull Image image, @NonNull File file, double aspectRatio, @NonNull Callback callback) {
+  ImageSaver(@NonNull Image image, @NonNull File file, double aspectRatio, int lensFacing, @NonNull Callback callback) {
     this.image = image;
     this.file = file;
     this.callback = callback;
     this.aspectRatio = aspectRatio;
+    this.lensFacing = lensFacing;
   }
 
   @Override
@@ -75,7 +79,12 @@ public class ImageSaver implements Runnable {
     }
 
     Matrix matrix = new Matrix();
-    matrix.postRotate(90);
+    if (lensFacing == CameraMetadata.LENS_FACING_BACK) {
+      matrix.postRotate(90);
+    } else {
+      matrix.postRotate(-90);
+      matrix.postScale(-1, 1);
+    }
 
     bitmap = Bitmap.createBitmap(
         bitmap,

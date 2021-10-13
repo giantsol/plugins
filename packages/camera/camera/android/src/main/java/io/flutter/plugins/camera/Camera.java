@@ -1057,6 +1057,7 @@ class Camera
             reader.acquireNextImage(),
             captureFile,
             saveAspectRatio,
+            cameraProperties.getLensFacing(),
             new ImageSaver.Callback() {
               @Override
               public void onComplete(String absolutePath) {
