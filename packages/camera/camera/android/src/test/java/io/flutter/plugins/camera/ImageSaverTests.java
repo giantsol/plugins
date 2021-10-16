@@ -13,6 +13,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import android.hardware.camera2.CameraMetadata;
 import android.media.Image;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -71,7 +72,7 @@ public class ImageSaverTests {
 
     // Set up testable ImageSaver instance
     mockCallback = mock(ImageSaver.Callback.class);
-    imageSaver = new ImageSaver(mockImage, mockFile, 1, mockCallback);
+    imageSaver = new ImageSaver(mockImage, mockFile, 1, CameraMetadata.LENS_FACING_BACK, 0, mockCallback);
   }
 
   @After

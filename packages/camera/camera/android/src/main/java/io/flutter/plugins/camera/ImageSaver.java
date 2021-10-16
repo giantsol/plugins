@@ -39,6 +39,8 @@ public class ImageSaver implements Runnable {
 
   private final int lensFacing;
 
+  private final int screenOrientation;
+
   /**
    * Creates an instance of the ImageSaver runnable
    *
@@ -46,12 +48,13 @@ public class ImageSaver implements Runnable {
    * @param file - The file to save the image to
    * @param callback - The callback that is run on completion, or when an error is encountered.
    */
-  ImageSaver(@NonNull Image image, @NonNull File file, double aspectRatio, int lensFacing, @NonNull Callback callback) {
+  ImageSaver(@NonNull Image image, @NonNull File file, double aspectRatio, int lensFacing, int screenOrientation, @NonNull Callback callback) {
     this.image = image;
     this.file = file;
     this.callback = callback;
     this.aspectRatio = aspectRatio;
     this.lensFacing = lensFacing;
+    this.screenOrientation = screenOrientation;
   }
 
   @Override
@@ -80,9 +83,21 @@ public class ImageSaver implements Runnable {
 
     Matrix matrix = new Matrix();
     if (lensFacing == CameraMetadata.LENS_FACING_BACK) {
-      matrix.postRotate(90);
+      if (screenOrientation < 225 || screenOrientation > 315) {
+        if (screenOrientation >= 45 && screenOrientation <= 135) {
+          matrix.postRotate(180);
+        } else {
+          matrix.postRotate(90);
+        }
+      }
     } else {
-      matrix.postRotate(-90);
+      if (screenOrientation < 225 || screenOrientation > 315) {
+        if (screenOrientation >= 45 && screenOrientation <= 135) {
+          matrix.postRotate(180);
+        } else {
+          matrix.postRotate(-90);
+        }
+      }
       matrix.postScale(-1, 1);
     }
 

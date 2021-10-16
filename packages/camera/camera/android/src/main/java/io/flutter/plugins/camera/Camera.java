@@ -31,6 +31,7 @@ import android.os.Looper;
 import android.util.Log;
 import android.util.Size;
 import android.view.Display;
+import android.view.OrientationEventListener;
 import android.view.Surface;
 
 import androidx.annotation.NonNull;
@@ -141,6 +142,9 @@ class Camera
   private final CameraFilterApplier cameraFilterApplier;
   double saveAspectRatio;
 
+  private OrientationEventListener orientationEventListener;
+  private int screenOrientation;
+
   public Camera(
       final Activity activity,
       final SurfaceTextureEntry flutterTexture,
@@ -174,6 +178,14 @@ class Camera
 
     cameraFilterApplier = new CameraFilterApplier(applicationContext, flutterTexture, cameraFeatures, cameraProperties);
     this.saveAspectRatio = saveAspectRatio;
+
+    orientationEventListener = new OrientationEventListener(activity) {
+      @Override
+      public void onOrientationChanged(int orientation) {
+        screenOrientation = orientation;
+      }
+    };
+    orientationEventListener.enable();
   }
 
   @Override
@@ -1058,6 +1070,7 @@ class Camera
             captureFile,
             saveAspectRatio,
             cameraProperties.getLensFacing(),
+            screenOrientation,
             new ImageSaver.Callback() {
               @Override
               public void onComplete(String absolutePath) {
@@ -1154,6 +1167,8 @@ class Camera
     getDeviceOrientationManager().stop();
 
     cameraFilterApplier.release();
+
+    orientationEventListener.disable();
   }
 
   /** Factory class that assists in creating a {@link HandlerThread} instance. */
