@@ -63,6 +63,10 @@ class CameraFilterApplier(
     }
   }
 
+  fun setColorFilterIntensity(intensity: Double) {
+    colorFilter.filterIntensity = intensity.toFloat()
+  }
+
   // Called from GLThread
   fun onOutputEglSurfaceCreated() {
     GLES20.glGenTextures(inputTextureIdArray.size, inputTextureIdArray, 0)

@@ -434,6 +434,16 @@ class MethodChannelCamera extends CameraPlatform {
     );
 
   @override
+  Future<void> setColorFilterIntensity(int cameraId, double intensity) =>
+    _channel.invokeMethod<void>(
+      'setColorFilterIntensity',
+      <String, dynamic> {
+        'cameraId': cameraId,
+        'intensity': intensity,
+      },
+    );
+
+  @override
   Future<void> setSaveAspectRatio(int cameraId, double saveAspectRatio) =>
     _channel.invokeMethod<void>(
       'setSaveAspectRatio',

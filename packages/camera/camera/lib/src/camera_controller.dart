@@ -809,6 +809,15 @@ class CameraController extends ValueNotifier<CameraValue> {
     }
   }
 
+  /// Sets color filter intensity.
+  Future<void> setColorFilterIntensity(double intensity) async {
+    try {
+      await CameraPlatform.instance.setColorFilterIntensity(_cameraId, intensity);
+    } on PlatformException catch (e) {
+      throw CameraException(e.code, e.message);
+    }
+  }
+
   /// Sets the save aspect ratio.
   Future<void> setSaveAspectRatio(double saveAspectRatio) async {
     try {

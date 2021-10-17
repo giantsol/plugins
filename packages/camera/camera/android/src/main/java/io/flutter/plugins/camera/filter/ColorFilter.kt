@@ -18,6 +18,7 @@ class ColorFilter(
     private const val FRAGMENT_SHADER_TEXTURE_NAME = "s_texture"
     private const val FRAGMENT_SHADER_LUT_TEXTURE_NAME = "textureLUT"
     private const val FRAGMENT_SHADER_FILTER_FLAG_NAME = "filterFlag"
+    private const val FRAGMENT_SHADER_FILTER_INTENSITY_NAME = "filterIntensity"
   }
 
   private val vertex = floatArrayOf(
@@ -55,11 +56,13 @@ class ColorFilter(
   private var fragmentTextureHandle: Int = 0
   private var fragmentLUTTextureHandle: Int = 0
   private var fragmentFilterFlagHandle: Int = 0
+  private var fragmentFilterIntensityHandle: Int = 0
 
   private var inputTextureId: Int = 0
 
   private var lutTextureId: Int = 0
   private var filterFlag = 0
+  var filterIntensity = 0.9f
 
   fun onOutputEglSurfaceCreated(inputTextureId: Int) {
     this.inputTextureId = inputTextureId
@@ -74,12 +77,15 @@ class ColorFilter(
       GLES20.glGetUniformLocation(program, FRAGMENT_SHADER_LUT_TEXTURE_NAME)
     fragmentFilterFlagHandle =
       GLES20.glGetUniformLocation(program, FRAGMENT_SHADER_FILTER_FLAG_NAME)
+    fragmentFilterIntensityHandle =
+      GLES20.glGetUniformLocation(program, FRAGMENT_SHADER_FILTER_INTENSITY_NAME)
   }
 
   fun onDrawFrame() {
     GLES20.glUseProgram(program)
     GLES20.glUniformMatrix4fv(vertexMatrixHandle, 1, false, matrix, 0)
     GLES20.glUniform1i(fragmentFilterFlagHandle, filterFlag)
+    GLES20.glUniform1f(fragmentFilterIntensityHandle, filterIntensity)
     bindTexture()
     enableVertexAttribs()
     GLES20.glClearColor(1f, 1f, 1f, 1f)
@@ -133,9 +139,11 @@ class ColorFilter(
 
     if (lutFilePath == null) {
       lutTextureId = 0
+      filterIntensity = 0f
       filterFlag = 0
     } else {
       lutTextureId = GLUtil.loadLUTFileAsTexture(context, lutFilePath)
+      filterIntensity = intensity!!.toFloat()
       filterFlag = if (lutTextureId == 0) {
         0
       } else {

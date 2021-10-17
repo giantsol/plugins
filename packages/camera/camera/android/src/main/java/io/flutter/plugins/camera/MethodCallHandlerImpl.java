@@ -371,6 +371,18 @@ final class MethodCallHandlerImpl implements MethodChannel.MethodCallHandler {
           }
           break;
         }
+      case "setColorFilterIntensity":
+      {
+        Double intensity = call.argument("intensity");
+
+        try {
+          camera.setColorFilterIntensity(intensity);
+          result.success(null);
+        } catch (Exception e) {
+          handleException(e, result);
+        }
+        break;
+      }
       case "setSaveAspectRatio":
         {
           try {

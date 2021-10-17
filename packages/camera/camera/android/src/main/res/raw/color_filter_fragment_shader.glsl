@@ -7,6 +7,7 @@ uniform sampler2D s_texture;
 uniform sampler2D textureLUT;
 
 uniform int filterFlag;
+uniform float filterIntensity;
 
 void grey(inout vec4 color){
     float weightMean = color.r * 0.3 + color.g * 0.59 + color.b * 0.11;
@@ -32,7 +33,8 @@ vec4 lookupTable(vec4 color){
     vec4 newColor1 = texture(textureLUT, texPos1);
     vec4 newColor2 = texture(textureLUT, texPos2);
     vec4 newColor = mix(newColor1, newColor2, fract(blueColor));
-    return vec4(newColor.rgb, color.w);
+    vec4 finalColor = (newColor - color) * filterIntensity + color;
+    return vec4(finalColor.rgb, color.w);
 }
 
 void main(){

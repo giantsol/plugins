@@ -1055,6 +1055,10 @@ class Camera
     cameraFilterApplier.setColorFilter(lutFilePath, intensity);
   }
 
+  public void setColorFilterIntensity(Double intensity) {
+    cameraFilterApplier.setColorFilterIntensity(intensity);
+  }
+
   /**
    * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
    * still image is ready to be saved.

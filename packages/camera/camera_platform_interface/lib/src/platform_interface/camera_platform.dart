@@ -253,8 +253,14 @@ abstract class CameraPlatform extends PlatformInterface {
     throw UnimplementedError('buildView() has not been implemented.');
   }
 
+  /// Sets color filter.
   Future<void> setColorFilter(int cameraId, String? lutFilePath, double? intensity) {
     throw UnimplementedError('setColorFilter() is not implemented.');
+  }
+
+  /// Sets color filter intensity.
+  Future<void> setColorFilterIntensity(int cameraId, double intensity) {
+    throw UnimplementedError('setColorFilterIntensity() is not implemented.');
   }
 
   /// Sets the save aspect ratio.
