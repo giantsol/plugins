@@ -1051,8 +1051,8 @@ class Camera
         });
   }
 
-  public void switchFilter() {
-    cameraFilterApplier.switchFilter();
+  public void setColorFilter(String lutFilePath, Double intensity) {
+    cameraFilterApplier.setColorFilter(lutFilePath, intensity);
   }
 
   /**

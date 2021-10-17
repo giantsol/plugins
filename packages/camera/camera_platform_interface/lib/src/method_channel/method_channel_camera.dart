@@ -423,11 +423,13 @@ class MethodChannelCamera extends CameraPlatform {
   }
 
   @override
-  Future<void> switchFilter(int cameraId) =>
+  Future<void> setColorFilter(int cameraId, String? lutFilePath, double? intensity) =>
     _channel.invokeMethod<void>(
-      'switchFilter',
+      'setColorFilter',
       <String, dynamic> {
         'cameraId': cameraId,
+        'lutFilePath': lutFilePath,
+        'intensity': intensity,
       },
     );
 

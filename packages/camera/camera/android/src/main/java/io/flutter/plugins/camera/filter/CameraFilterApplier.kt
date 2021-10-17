@@ -57,11 +57,9 @@ class CameraFilterApplier(
 //    triangle = Triangle(width, height)
   }
 
-  fun switchFilter() {
-    if (colorFilter.filterFlag == 0) {
-      colorFilter.filterFlag = 1
-    } else {
-      colorFilter.filterFlag = 0
+  fun setColorFilter(lutFilePath: String?, intensity: Double?) {
+    glThread.queueEvent {
+      colorFilter.updateLutTexture(lutFilePath, intensity)
     }
   }
 

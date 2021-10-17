@@ -59,7 +59,7 @@ class ColorFilter(
   private var inputTextureId: Int = 0
 
   private var lutTextureId: Int = 0
-  var filterFlag = 0
+  private var filterFlag = 0
 
   fun onOutputEglSurfaceCreated(inputTextureId: Int) {
     this.inputTextureId = inputTextureId
@@ -74,8 +74,6 @@ class ColorFilter(
       GLES20.glGetUniformLocation(program, FRAGMENT_SHADER_LUT_TEXTURE_NAME)
     fragmentFilterFlagHandle =
       GLES20.glGetUniformLocation(program, FRAGMENT_SHADER_FILTER_FLAG_NAME)
-
-    lutTextureId = GLUtil.loadLUTDrawableAsTexture(context, R.drawable.lut_aloha01)
   }
 
   fun onDrawFrame() {
@@ -125,6 +123,25 @@ class ColorFilter(
   private fun disableVertexAttribs() {
     GLES20.glDisableVertexAttribArray(vertexPositionHandle)
     GLES20.glDisableVertexAttribArray(vertexTexCoordHandle)
+  }
+
+  fun updateLutTexture(lutFilePath: String?, intensity: Double?) {
+    if (lutTextureId != 0) {
+      val lutTextureName = intArrayOf(lutTextureId)
+      GLES20.glDeleteTextures(lutTextureName.size, lutTextureName, 0)
+    }
+
+    if (lutFilePath == null) {
+      lutTextureId = 0
+      filterFlag = 0
+    } else {
+      lutTextureId = GLUtil.loadLUTFileAsTexture(context, lutFilePath)
+      filterFlag = if (lutTextureId == 0) {
+        0
+      } else {
+        1
+      }
+    }
   }
 
 }

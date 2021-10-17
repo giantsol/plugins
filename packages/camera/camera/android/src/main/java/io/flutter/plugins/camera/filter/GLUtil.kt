@@ -1,6 +1,7 @@
 package io.flutter.plugins.camera.filter
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.opengl.GLES20
 import android.opengl.GLUtils
@@ -9,6 +10,7 @@ import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.annotation.RawRes
 import java.io.BufferedReader
+import java.io.File
 import java.io.InputStreamReader
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -109,18 +111,27 @@ object GLUtil {
     return builder.toString()
   }
 
-  fun loadLUTDrawableAsTexture(context: Context, @DrawableRes resId: Int): Int {
-    val textureName = IntArray(1)
-    GLES20.glGenTextures(textureName.size, textureName, 0)
-
+  fun loadLUTFileAsTexture(context: Context, filePath: String): Int {
+    val file = File(context.filesDir, filePath)
     val options = BitmapFactory.Options()
     options.inScaled = false
-    val lutBitmap = BitmapFactory.decodeResource(context.resources, resId, options)
+    return loadLUTTexture(BitmapFactory.decodeFile(file.absolutePath, options))
+  }
+
+  fun loadLUTDrawableAsTexture(context: Context, @DrawableRes resId: Int): Int {
+    val options = BitmapFactory.Options()
+    options.inScaled = false
+    return loadLUTTexture(BitmapFactory.decodeResource(context.resources, resId, options))
+  }
+
+  private fun loadLUTTexture(lutBitmap: Bitmap?): Int {
     if (lutBitmap == null) {
-      GLES20.glDeleteTextures(textureName.size, textureName, 0)
-      Log.e(TAG, "bitmap cannot be decoded from resource id: $resId")
+      Log.e(TAG, "bitmap cannot be decoded")
       return 0
     }
+
+    val textureName = IntArray(1)
+    GLES20.glGenTextures(textureName.size, textureName, 0)
 
     // Bind texture to OpenGL
     GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureName[0])

@@ -800,11 +800,10 @@ class CameraController extends ValueNotifier<CameraValue> {
     }
   }
 
-  /// Switch filter
-  /// todo: this is temp method
-  Future<void> switchFilter() async {
+  /// Sets color filter.
+  Future<void> setColorFilter(String? lutFilePath, [double? intensity]) async {
     try {
-      await CameraPlatform.instance.switchFilter(_cameraId);
+      await CameraPlatform.instance.setColorFilter(_cameraId, lutFilePath, intensity);
     } on PlatformException catch (e) {
       throw CameraException(e.code, e.message);
     }

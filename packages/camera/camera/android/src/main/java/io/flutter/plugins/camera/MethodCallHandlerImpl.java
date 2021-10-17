@@ -350,10 +350,25 @@ final class MethodCallHandlerImpl implements MethodChannel.MethodCallHandler {
           result.success(null);
           break;
         }
-      case "switchFilter":
+      case "setColorFilter":
         {
-          camera.switchFilter();
-          result.success(null);
+          String lutFilePath = call.argument("lutFilePath");
+          Double intensity = call.argument("intensity");
+          if (lutFilePath != null && intensity == null) {
+            result.error(
+                "SETCOLORFILTER_ERROR",
+                "setColorFilter should receive intensity when lutFilePath is specified.",
+                null
+            );
+            return;
+          }
+
+          try {
+            camera.setColorFilter(lutFilePath, intensity);
+            result.success(null);
+          } catch (Exception e) {
+            handleException(e, result);
+          }
           break;
         }
       case "setSaveAspectRatio":

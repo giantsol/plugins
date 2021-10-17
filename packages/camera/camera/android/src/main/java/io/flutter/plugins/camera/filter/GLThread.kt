@@ -36,6 +36,7 @@ class GLThread(
   private var requestRender: Boolean = true
   private var wantRenderNotification: Boolean = false
   private var renderComplete: Boolean = false
+  private val eventQueue = ArrayList<Runnable>()
 
   // End of member variables protected by the sGLThreadManager monitor.
 
@@ -68,12 +69,18 @@ class GLThread(
       var wantRenderNotification = false
       var doRenderNotification = false
       var askedToReleaseEglContext = false
+      var event: Runnable? = null;
 
       while (true) {
         synchronized(glThreadManager.lock) {
           while (true) {
             if (shouldExit) {
               return
+            }
+
+            if (eventQueue.isNotEmpty()) {
+              event = eventQueue.removeFirst()
+              break
             }
 
             // Update the pause state.
@@ -172,6 +179,12 @@ class GLThread(
             glThreadManager.lock.wait()
           }
         } // end of synchronized
+
+        if (event != null) {
+          event!!.run()
+          event = null
+          continue
+        }
 
         if (createEglSurface) {
           if (eglHelper.createSurface()) {
@@ -328,6 +341,13 @@ class GLThread(
           currentThread().interrupt()
         }
       }
+    }
+  }
+
+  fun queueEvent(r: Runnable) {
+    synchronized(glThreadManager.lock) {
+      eventQueue.add(r)
+      glThreadManager.lock.notifyAll()
     }
   }
 }
