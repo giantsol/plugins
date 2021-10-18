@@ -5,11 +5,8 @@
 package io.flutter.plugins.camera;
 
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
-import android.hardware.camera2.CameraMetadata;
 import android.media.Image;
-import android.util.Log;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.VisibleForTesting;
@@ -19,15 +16,14 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 import static java.lang.Math.max;
 
 /** Saves a JPEG {@link Image} into the specified {@link File}. */
 public class ImageSaver implements Runnable {
 
-  /** The JPEG image */
-  private final Image image;
+  /** The image bitmap. */
+  private final Bitmap bitmap;
 
   /** The file we save the image into. */
   private final File file;
@@ -44,12 +40,12 @@ public class ImageSaver implements Runnable {
   /**
    * Creates an instance of the ImageSaver runnable
    *
-   * @param image - The image to save
+   * @param bitmap - The bitmap to save
    * @param file - The file to save the image to
    * @param callback - The callback that is run on completion, or when an error is encountered.
    */
-  ImageSaver(@NonNull Image image, @NonNull File file, double aspectRatio, int lensFacing, int screenOrientation, @NonNull Callback callback) {
-    this.image = image;
+  ImageSaver(@NonNull Bitmap bitmap, @NonNull File file, double aspectRatio, int lensFacing, int screenOrientation, @NonNull Callback callback) {
+    this.bitmap = bitmap;
     this.file = file;
     this.callback = callback;
     this.aspectRatio = aspectRatio;
@@ -59,11 +55,6 @@ public class ImageSaver implements Runnable {
 
   @Override
   public void run() {
-    ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-    byte[] bytes = new byte[buffer.remaining()];
-    buffer.get(bytes);
-
-    Bitmap bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
     final int imageWidth = bitmap.getHeight();
     final int imageHeight = bitmap.getWidth();
     int realWidth = imageWidth;
@@ -76,32 +67,21 @@ public class ImageSaver implements Runnable {
       verticalCutOff = -changedHeightDelta / 2;
     } else {
       zoom = (float) realHeight / imageHeight;
-      realWidth = (int) (imageWidth * zoom);
-      final int changedWidthDelta = realWidth - imageWidth;
+      realWidth = (int) (imageWidth / zoom);
+      final int changedWidthDelta = imageWidth - realWidth;
       horizontalCutOff = max(0, changedWidthDelta / 2);
     }
 
     Matrix matrix = new Matrix();
-    if (lensFacing == CameraMetadata.LENS_FACING_BACK) {
-      if (screenOrientation < 225 || screenOrientation > 315) {
-        if (screenOrientation >= 45 && screenOrientation <= 135) {
-          matrix.postRotate(180);
-        } else {
-          matrix.postRotate(90);
-        }
+    if (screenOrientation < 225 || screenOrientation > 315) {
+      if (screenOrientation >= 45 && screenOrientation <= 135) {
+        matrix.postRotate(180);
+      } else {
+        matrix.postRotate(90);
       }
-    } else {
-      if (screenOrientation < 225 || screenOrientation > 315) {
-        if (screenOrientation >= 45 && screenOrientation <= 135) {
-          matrix.postRotate(180);
-        } else {
-          matrix.postRotate(-90);
-        }
-      }
-      matrix.postScale(-1, 1);
     }
 
-    bitmap = Bitmap.createBitmap(
+    final Bitmap finalBitmap = Bitmap.createBitmap(
         bitmap,
         verticalCutOff,
         horizontalCutOff,
@@ -111,8 +91,11 @@ public class ImageSaver implements Runnable {
         true
     );
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
-    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, bos);
-    bytes = bos.toByteArray();
+    finalBitmap.compress(Bitmap.CompressFormat.JPEG, 100, bos);
+    byte[] bytes = bos.toByteArray();
+
+    bitmap.recycle();
+    finalBitmap.recycle();
 
     FileOutputStream output = null;
     try {
@@ -124,7 +107,6 @@ public class ImageSaver implements Runnable {
     } catch (IOException e) {
       callback.onError("IOError", "Failed saving image");
     } finally {
-      image.close();
       if (null != output) {
         try {
           output.close();

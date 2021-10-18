@@ -164,4 +164,9 @@ object GLUtil {
     }
     return matrix
   }
+
+  fun rotateMatrix(matrix: FloatArray, angle: Float, x: Float, y: Float, z: Float): FloatArray {
+    Matrix.rotateM(matrix, 0, angle, x, y, z)
+    return matrix
+  }
 }

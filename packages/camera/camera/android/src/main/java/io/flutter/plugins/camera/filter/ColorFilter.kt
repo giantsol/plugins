@@ -35,7 +35,7 @@ class ColorFilter(
     1.0f, 1.0f
   )
 
-  private val matrix: FloatArray = GLUtil.flipMatrix(
+  var matrix: FloatArray = GLUtil.flipMatrix(
     floatArrayOf(
       1f, 0f, 0f, 0f,
       0f, 1f, 0f, 0f,

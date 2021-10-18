@@ -8,6 +8,7 @@ import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -72,6 +73,7 @@ import io.flutter.plugins.camera.features.sensororientation.DeviceOrientationMan
 import io.flutter.plugins.camera.features.sensororientation.SensorOrientationFeature;
 import io.flutter.plugins.camera.features.zoomlevel.ZoomLevelFeature;
 import io.flutter.plugins.camera.filter.CameraFilterApplier;
+import io.flutter.plugins.camera.filter.CaptureCallback;
 import io.flutter.plugins.camera.media.MediaRecorderBuilder;
 import io.flutter.plugins.camera.types.CameraCaptureProperties;
 import io.flutter.plugins.camera.types.CaptureTimeoutsWrapper;
@@ -84,7 +86,7 @@ interface ErrorCallback {
 
 class Camera
     implements CameraCaptureCallback.CameraCaptureStateListener,
-        ImageReader.OnImageAvailableListener {
+    CaptureCallback {
   private static final String TAG = "Camera";
 
   private static final HashMap<String, Integer> supportedImageFormats;
@@ -119,7 +121,6 @@ class Camera
 
   private CameraDevice cameraDevice;
   private CameraCaptureSession captureSession;
-  private ImageReader pictureImageReader;
   private ImageReader imageStreamReader;
   /** {@link CaptureRequest.Builder} for the camera preview */
   private CaptureRequest.Builder previewRequestBuilder;
@@ -176,7 +177,13 @@ class Camera
 
     startBackgroundThread();
 
-    cameraFilterApplier = new CameraFilterApplier(applicationContext, flutterTexture, cameraFeatures, cameraProperties);
+    cameraFilterApplier = new CameraFilterApplier(
+        applicationContext,
+        flutterTexture,
+        cameraFeatures,
+        cameraProperties,
+        this
+    );
     this.saveAspectRatio = saveAspectRatio;
 
     orientationEventListener = new OrientationEventListener(activity) {
@@ -245,14 +252,6 @@ class Camera
               + "\" is not supported by this plugin.");
       return;
     }
-
-    // Always capture using JPEG format.
-    pictureImageReader =
-        ImageReader.newInstance(
-            resolutionFeature.getCaptureSize().getWidth(),
-            resolutionFeature.getCaptureSize().getHeight(),
-            ImageFormat.JPEG,
-            1);
 
     // For image streaming, use the provided image format or fall back to YUV420.
     Integer imageFormat = supportedImageFormats.get(imageFormatGroup);
@@ -492,9 +491,6 @@ class Camera
       return;
     }
 
-    // Listen for picture being taken.
-    pictureImageReader.setOnImageAvailableListener(this, backgroundHandler);
-
     final AutoFocusFeature autoFocusFeature = cameraFeatures.getAutoFocus();
     final boolean isAutoFocusSupported = autoFocusFeature.checkIsSupported();
     if (isAutoFocusSupported && autoFocusFeature.getValue() == FocusMode.auto) {
@@ -558,7 +554,7 @@ class Camera
       dartMessenger.error(flutterResult, "cameraAccess", e.getMessage(), null);
       return;
     }
-    stillBuilder.addTarget(pictureImageReader.getSurface());
+    stillBuilder.addTarget(cameraFilterApplier.getInputSurface());
 
     // Zoom.
     stillBuilder.set(
@@ -581,11 +577,17 @@ class Camera
     CameraCaptureSession.CaptureCallback captureCallback =
         new CameraCaptureSession.CaptureCallback() {
           @Override
+          public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
+            cameraFilterApplier.setCapturing(true);
+          }
+
+          @Override
           public void onCaptureCompleted(
               @NonNull CameraCaptureSession session,
               @NonNull CaptureRequest request,
               @NonNull TotalCaptureResult result) {
             unlockAutoFocus();
+            cameraCaptureCallback.setCameraState(CameraState.STATE_PREVIEW);
           }
         };
 
@@ -1026,10 +1028,9 @@ class Camera
   }
 
   public void startPreview() throws CameraAccessException {
-    if (pictureImageReader == null || pictureImageReader.getSurface() == null) return;
     Log.i(TAG, "startPreview");
 
-    createCaptureSession(CameraDevice.TEMPLATE_PREVIEW, pictureImageReader.getSurface());
+    createCaptureSession(CameraDevice.TEMPLATE_PREVIEW);
   }
 
   public void startPreviewWithImageStream(EventChannel imageStreamChannel)
@@ -1059,18 +1060,13 @@ class Camera
     cameraFilterApplier.setColorFilterIntensity(intensity);
   }
 
-  /**
-   * This a callback object for the {@link ImageReader}. "onImageAvailable" will be called when a
-   * still image is ready to be saved.
-   */
   @Override
-  public void onImageAvailable(ImageReader reader) {
+  public void onImageAvailable(@NonNull Bitmap bitmap) {
     Log.i(TAG, "onImageAvailable");
 
     backgroundHandler.post(
         new ImageSaver(
-            // Use acquireNextImage since image reader is only for one image.
-            reader.acquireNextImage(),
+            bitmap,
             captureFile,
             saveAspectRatio,
             cameraProperties.getLensFacing(),
@@ -1145,10 +1141,6 @@ class Camera
     if (cameraDevice != null) {
       cameraDevice.close();
       cameraDevice = null;
-    }
-    if (pictureImageReader != null) {
-      pictureImageReader.close();
-      pictureImageReader = null;
     }
     if (imageStreamReader != null) {
       imageStreamReader.close();
