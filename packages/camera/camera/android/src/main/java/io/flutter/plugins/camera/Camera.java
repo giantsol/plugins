@@ -578,6 +578,7 @@ class Camera
         new CameraCaptureSession.CaptureCallback() {
           @Override
           public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
+            dartMessenger.sendCameraCaptureStartedEvent();
             cameraFilterApplier.setCapturing(true);
           }
 

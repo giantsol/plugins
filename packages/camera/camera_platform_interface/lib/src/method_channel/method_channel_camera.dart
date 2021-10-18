@@ -166,6 +166,11 @@ class MethodChannelCamera extends CameraPlatform {
   }
 
   @override
+  Stream<CameraCaptureStartedEvent> onCameraCaptureStarted(int cameraId) {
+    return _cameraEvents(cameraId).whereType<CameraCaptureStartedEvent>();
+  }
+
+  @override
   Stream<VideoRecordedEvent> onVideoRecordedEvent(int cameraId) {
     return _cameraEvents(cameraId).whereType<VideoRecordedEvent>();
   }
@@ -547,6 +552,11 @@ class MethodChannelCamera extends CameraPlatform {
         cameraEventStreamController.add(CameraErrorEvent(
           cameraId,
           call.arguments['description'],
+        ));
+        break;
+      case 'capture_started':
+        cameraEventStreamController.add(CameraCaptureStartedEvent(
+          cameraId,
         ));
         break;
       default:

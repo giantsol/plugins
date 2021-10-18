@@ -259,6 +259,7 @@ class CameraController extends ValueNotifier<CameraValue> {
   StreamSubscription<dynamic>? _imageStreamSubscription;
   FutureOr<bool>? _initCalled;
   StreamSubscription? _deviceOrientationSubscription;
+  StreamSubscription? _captureStartedSubscription;
 
   /// Checks whether [CameraController.dispose] has completed successfully.
   ///
@@ -379,7 +380,7 @@ class CameraController extends ValueNotifier<CameraValue> {
   /// Captures an image and returns the file where it was saved.
   ///
   /// Throws a [CameraException] if the capture fails.
-  Future<XFile> takePicture() async {
+  Future<XFile> takePicture({VoidCallback? onCaptureStarted}) async {
     _throwIfNotInitialized("takePicture");
     if (value.isTakingPicture) {
       throw CameraException(
@@ -387,6 +388,12 @@ class CameraController extends ValueNotifier<CameraValue> {
         'takePicture was called before the previous capture returned.',
       );
     }
+
+    _captureStartedSubscription?.cancel();
+    _captureStartedSubscription =
+      CameraPlatform.instance.onCameraCaptureStarted(_cameraId).listen((event) {
+        onCaptureStarted?.call();
+      });
     try {
       value = value.copyWith(isTakingPicture: true);
       XFile file = await CameraPlatform.instance.takePicture(_cameraId);
@@ -834,6 +841,7 @@ class CameraController extends ValueNotifier<CameraValue> {
       return;
     }
     unawaited(_deviceOrientationSubscription?.cancel());
+    unawaited(_captureStartedSubscription?.cancel());
     _isDisposed = true;
     super.dispose();
     if (_initCalled != null) {

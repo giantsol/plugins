@@ -236,6 +236,27 @@ class CameraErrorEvent extends CameraEvent {
   int get hashCode => super.hashCode ^ description.hashCode;
 }
 
+class CameraCaptureStartedEvent extends CameraEvent {
+  CameraCaptureStartedEvent(int cameraId) : super(cameraId);
+
+  CameraCaptureStartedEvent.fromJson(Map<String, dynamic> json)
+    : super(json['cameraId']);
+
+  Map<String, dynamic> toJson() => {
+    'cameraId': cameraId,
+  };
+
+  @override
+  bool operator ==(Object other) =>
+    identical(this, other) ||
+      super == (other) &&
+        other is CameraCaptureStartedEvent &&
+        runtimeType == other.runtimeType;
+
+  @override
+  int get hashCode => super.hashCode;
+}
+
 /// An event fired when a video has finished recording.
 class VideoRecordedEvent extends CameraEvent {
   /// XFile of the recorded video.
