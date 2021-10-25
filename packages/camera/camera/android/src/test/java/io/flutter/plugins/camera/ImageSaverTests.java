@@ -72,7 +72,7 @@ public class ImageSaverTests {
 
     // Set up testable ImageSaver instance
     mockCallback = mock(ImageSaver.Callback.class);
-    imageSaver = new ImageSaver(null, mockFile, 1, CameraMetadata.LENS_FACING_BACK, 0, mockCallback);
+    imageSaver = new ImageSaver(null, 0, 0, mockFile, 1, CameraMetadata.LENS_FACING_BACK, 0, mockCallback);
   }
 
   @After

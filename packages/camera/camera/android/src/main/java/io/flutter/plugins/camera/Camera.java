@@ -8,7 +8,6 @@ import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
@@ -1080,12 +1079,16 @@ class Camera
   }
 
   @Override
-  public void onImageAvailable(@NonNull Bitmap bitmap) {
+  public void onImageAvailable(@NonNull ByteBuffer data) {
     Log.i(TAG, "onImageAvailable");
 
+    final ResolutionFeature resolutionFeature = cameraFeatures.getResolution();
+    final int width = resolutionFeature.getCaptureSize().getWidth();
+    final int height = resolutionFeature.getCaptureSize().getHeight();
     backgroundHandler.post(
         new ImageSaver(
-            bitmap,
+            data,
+            width, height,
             captureFile,
             saveAspectRatio,
             cameraProperties.getLensFacing(),

@@ -16,14 +16,18 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 
 import static java.lang.Math.max;
 
 /** Saves a JPEG {@link Image} into the specified {@link File}. */
 public class ImageSaver implements Runnable {
 
-  /** The image bitmap. */
-  private final Bitmap bitmap;
+  /** The image data. */
+  private final ByteBuffer data;
+
+  private final int width;
+  private final int height;
 
   /** The file we save the image into. */
   private final File file;
@@ -40,12 +44,14 @@ public class ImageSaver implements Runnable {
   /**
    * Creates an instance of the ImageSaver runnable
    *
-   * @param bitmap - The bitmap to save
+   * @param data - The data to save
    * @param file - The file to save the image to
    * @param callback - The callback that is run on completion, or when an error is encountered.
    */
-  ImageSaver(@NonNull Bitmap bitmap, @NonNull File file, double aspectRatio, int lensFacing, int screenOrientation, @NonNull Callback callback) {
-    this.bitmap = bitmap;
+  ImageSaver(@NonNull ByteBuffer data, int width, int height, @NonNull File file, double aspectRatio, int lensFacing, int screenOrientation, @NonNull Callback callback) {
+    this.data = data;
+    this.width = width;
+    this.height = height;
     this.file = file;
     this.callback = callback;
     this.aspectRatio = aspectRatio;
@@ -55,6 +61,9 @@ public class ImageSaver implements Runnable {
 
   @Override
   public void run() {
+    final Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+    bitmap.copyPixelsFromBuffer(data);
+
     final int imageWidth = bitmap.getHeight();
     final int imageHeight = bitmap.getWidth();
     int realWidth = imageWidth;

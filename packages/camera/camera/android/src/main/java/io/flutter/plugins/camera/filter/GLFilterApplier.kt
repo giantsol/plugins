@@ -1,7 +1,6 @@
 package io.flutter.plugins.camera.filter
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.SurfaceTexture
 import android.opengl.GLES20
 import android.view.Surface
@@ -27,7 +26,7 @@ class GLFilterApplier(
 
   interface Callback {
     fun onInputSurfaceCreated(surface: Surface)
-    fun onImageAvailable(bitmap: Bitmap)
+    fun onImageAvailable(data: ByteBuffer)
   }
 
   enum class Type {
@@ -53,6 +52,10 @@ class GLFilterApplier(
 
   @Volatile
   var isCapturing = false
+    set(value) {
+      field = value
+      glThread.requestRender()
+    }
   private val exportFrameBuffer = IntArray(1)
   private val exportTextureIdArray = IntArray(1)
 
@@ -119,16 +122,24 @@ class GLFilterApplier(
 
       GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, exportFrameBuffer[0])
       GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0, GLES20.GL_TEXTURE_2D, exportTextureIdArray[0], 0)
-      colorFilter.matrix = GLUtil.rotateMatrix(colorFilter.matrix, -90f, 0f, 0f, 1f)
-      colorFilter.matrix = GLUtil.flipMatrix(colorFilter.matrix, true, false)
+
+      if (type != Type.IMAGE) {
+        colorFilter.matrix = GLUtil.rotateMatrix(colorFilter.matrix, -90f, 0f, 0f, 1f)
+        colorFilter.matrix = GLUtil.flipMatrix(colorFilter.matrix, true, false)
+      } else {
+        colorFilter.matrix = GLUtil.flipMatrix(colorFilter.matrix, true, false)
+      }
       colorFilter.onDrawFrame()
-      colorFilter.matrix = GLUtil.flipMatrix(colorFilter.matrix, true, false)
-      colorFilter.matrix = GLUtil.rotateMatrix(colorFilter.matrix, 90f, 0f, 0f, 1f)
+      if (type != Type.IMAGE) {
+        colorFilter.matrix = GLUtil.flipMatrix(colorFilter.matrix, true, false)
+        colorFilter.matrix = GLUtil.rotateMatrix(colorFilter.matrix, 90f, 0f, 0f, 1f)
+      } else {
+        colorFilter.matrix = GLUtil.flipMatrix(colorFilter.matrix, true, false)
+      }
+
       GLES20.glReadPixels(0, 0, width, height, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, exportBuffer)
 
-      val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-      bitmap.copyPixelsFromBuffer(exportBuffer)
-      callback.onImageAvailable(bitmap)
+      callback.onImageAvailable(exportBuffer)
       GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
     } else {
       colorFilter.onDrawFrame()
