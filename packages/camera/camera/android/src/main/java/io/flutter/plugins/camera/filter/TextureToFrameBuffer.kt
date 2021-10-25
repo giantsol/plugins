@@ -1,17 +1,16 @@
 package io.flutter.plugins.camera.filter
 
 import android.content.Context
-import android.hardware.camera2.CameraMetadata
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import io.flutter.plugins.camera.R
 
 
-class CameraToFrameBuffer(
+class TextureToFrameBuffer(
   private val context: Context,
   private val width: Int,
   private val height: Int,
-  lensFacing: Int,
+  type: GLFilterApplier.Type,
 ) {
   companion object {
     private const val VERTEX_SHADER_POSITION_NAME = "a_Position"
@@ -53,7 +52,7 @@ class CameraToFrameBuffer(
 
   private val vertexBuffer = GLUtil.getFloatBuffer(vertex)
   private var textureCoordBuffer =
-    GLUtil.getFloatBuffer(if (lensFacing == CameraMetadata.LENS_FACING_BACK) backCameraTextureCoord else frontCameraTextureCoord)
+    GLUtil.getFloatBuffer(if (type == GLFilterApplier.Type.CAMERA_BACK) backCameraTextureCoord else frontCameraTextureCoord)
 
   private var program: Int = 0
   private var vertexPositionHandle: Int = 0

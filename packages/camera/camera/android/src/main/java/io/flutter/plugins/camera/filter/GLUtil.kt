@@ -111,8 +111,10 @@ object GLUtil {
     return builder.toString()
   }
 
-  fun loadLUTFileAsTexture(context: Context, filePath: String): Int {
-    val file = File(context.filesDir, filePath)
+  fun loadLUTFileAsTexture(context: Context, filePath: String, filterDir: Int): Int {
+    val file =
+      if (filterDir == GLFilterApplier.FILTER_DIR_SUPPORT) File(context.filesDir, filePath)
+      else File(context.cacheDir, filePath)
     val options = BitmapFactory.Options()
     options.inScaled = false
     return loadLUTTexture(BitmapFactory.decodeFile(file.absolutePath, options))

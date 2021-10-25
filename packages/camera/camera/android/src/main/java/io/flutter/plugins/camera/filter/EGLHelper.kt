@@ -7,7 +7,7 @@ import javax.microedition.khronos.egl.*
 import javax.microedition.khronos.opengles.GL
 
 
-class EGLHelper(private val cameraFilterApplierWeakRef: WeakReference<CameraFilterApplier>) {
+class EGLHelper(private val glFilterApplierWeakRef: WeakReference<GLFilterApplier>) {
   companion object {
     fun throwEglException(function: String, error: Int) {
       val message = formatEglError(function, error)
@@ -64,17 +64,17 @@ class EGLHelper(private val cameraFilterApplierWeakRef: WeakReference<CameraFilt
     if (!egl.eglInitialize(eglDisplay, version)) {
       throw java.lang.RuntimeException("eglInitialize failed")
     }
-    val cameraFilterApplier = cameraFilterApplierWeakRef.get()
-    if (cameraFilterApplier == null) {
+    val glFilterApplier = glFilterApplierWeakRef.get()
+    if (glFilterApplier == null) {
       eglConfig = null
       eglContext = null
     } else {
-      eglConfig = cameraFilterApplier.eglConfigChooser.chooseConfig(egl, eglDisplay)
+      eglConfig = glFilterApplier.eglConfigChooser.chooseConfig(egl, eglDisplay)
       /*
       * Create an EGL context. We want to do this as rarely as we can, because an
       * EGL context is a somewhat heavy object.
       */
-      eglContext = cameraFilterApplier.eglContextFactory.createContext(egl, eglDisplay, eglConfig)
+      eglContext = glFilterApplier.eglContextFactory.createContext(egl, eglDisplay, eglConfig)
     }
     if (eglContext == null || eglContext == EGL10.EGL_NO_CONTEXT) {
       eglContext = null
@@ -104,9 +104,9 @@ class EGLHelper(private val cameraFilterApplierWeakRef: WeakReference<CameraFilt
     destroySurface()
 
     // Create an EGL surface we can render into.
-    val cameraFilterApplier = cameraFilterApplierWeakRef.get()
+    val glFilterApplier = glFilterApplierWeakRef.get()
     eglSurface =
-      cameraFilterApplier?.eglWindowSurfaceFactory?.createWindowSurface(egl, eglDisplay, eglConfig, cameraFilterApplier.outputSurface)
+      glFilterApplier?.eglWindowSurfaceFactory?.createWindowSurface(egl, eglDisplay, eglConfig, glFilterApplier.outputSurface)
 
     if (eglSurface == null || eglSurface == EGL10.EGL_NO_SURFACE) {
       val error = egl.eglGetError()
@@ -151,7 +151,7 @@ class EGLHelper(private val cameraFilterApplierWeakRef: WeakReference<CameraFilt
         eglDisplay, EGL10.EGL_NO_SURFACE,
         EGL10.EGL_NO_SURFACE, EGL10.EGL_NO_CONTEXT
       )
-      cameraFilterApplierWeakRef.get()?.also {
+      glFilterApplierWeakRef.get()?.also {
         it.eglWindowSurfaceFactory.destroySurface(egl, eglDisplay, eglSurface)
       }
       eglSurface = null
@@ -162,7 +162,7 @@ class EGLHelper(private val cameraFilterApplierWeakRef: WeakReference<CameraFilt
     val egl = egl ?: throw RuntimeException("egl not initialized")
 
     if (eglContext != null) {
-      cameraFilterApplierWeakRef.get()?.also {
+      glFilterApplierWeakRef.get()?.also {
         it.eglContextFactory.destroyContext(egl, eglDisplay, eglContext)
       }
       eglContext = null

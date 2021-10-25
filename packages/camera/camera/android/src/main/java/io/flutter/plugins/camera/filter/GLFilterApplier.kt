@@ -5,42 +5,49 @@ import android.graphics.Bitmap
 import android.graphics.SurfaceTexture
 import android.opengl.GLES20
 import android.view.Surface
-import io.flutter.plugins.camera.CameraProperties
-import io.flutter.plugins.camera.features.CameraFeatures
-import io.flutter.view.TextureRegistry
 import java.lang.ref.WeakReference
 import java.nio.ByteBuffer
 
 
-class CameraFilterApplier(
+class GLFilterApplier(
   context: Context,
-  outputSurfaceTextureEntry: TextureRegistry.SurfaceTextureEntry,
-  cameraFeatures: CameraFeatures,
-  cameraProperties: CameraProperties,
-  private val captureCallback: CaptureCallback,
+  val outputSurface: Surface,
+  private val width: Int,
+  private val height: Int,
+  private val type: Type,
+  private val callback: Callback,
 ) {
   // todo: declare OPENGL 3 in manifest
   companion object {
     private const val EGL_CONTEXT_CLIENT_VERSION = 3
+
+    const val FILTER_DIR_SUPPORT = 0
+    const val FILTER_DIR_CACHE = 1
   }
 
-  val outputSurface: Surface
+  interface Callback {
+    fun onInputSurfaceCreated(surface: Surface)
+    fun onImageAvailable(bitmap: Bitmap)
+  }
 
-  private val width: Int
-  private val height: Int
+  enum class Type {
+    CAMERA_BACK,
+    CAMERA_FRONT,
+    IMAGE,
+  }
 
   val eglConfigChooser = EGLConfigChooserImpl(true, EGL_CONTEXT_CLIENT_VERSION)
   val eglContextFactory = EGLContextFactoryImpl(EGL_CONTEXT_CLIENT_VERSION)
   val eglWindowSurfaceFactory = EGLWindowSurfaceFactoryImpl()
 
   // Thread that will handle all EGL setups and drawings.
-  private val glThread: GLThread
+  private val glThread: GLThread = GLThread(WeakReference(this), width, height)
 
   private val inputTextureIdArray = IntArray(1)
   private lateinit var inputSurfaceTexture: SurfaceTexture
   var inputSurface: Surface? = null
 
-  private val cameraToFrameBuffer: CameraToFrameBuffer
+  private val textureToFrameBuffer: TextureToFrameBuffer
   private val colorFilter: ColorFilter
 //  private val triangle: Triangle
 
@@ -50,29 +57,24 @@ class CameraFilterApplier(
   private val exportTextureIdArray = IntArray(1)
 
   init {
-    val resolutionFeature = cameraFeatures.resolution
-    val outputSurfaceTexture = outputSurfaceTextureEntry.surfaceTexture()
-    width = resolutionFeature.captureSize.width
-    height = resolutionFeature.captureSize.height
-    outputSurfaceTexture.setDefaultBufferSize(width, height)
-    outputSurface = Surface(outputSurfaceTexture)
-
-    glThread = GLThread(WeakReference(this), width, height)
     glThread.start()
 
-    cameraToFrameBuffer = CameraToFrameBuffer(context, width, height, cameraProperties.lensFacing)
-    colorFilter = ColorFilter(context)
+    textureToFrameBuffer = TextureToFrameBuffer(context, width, height, type)
+    colorFilter = ColorFilter(context, type)
 //    triangle = Triangle(width, height)
   }
 
-  fun setColorFilter(lutFilePath: String?, intensity: Double?) {
+  @JvmOverloads
+  fun setColorFilter(lutFilePath: String?, intensity: Double?, filterDir: Int = FILTER_DIR_SUPPORT) {
     glThread.queueEvent {
-      colorFilter.updateLutTexture(lutFilePath, intensity)
+      colorFilter.updateLutTexture(lutFilePath, intensity, filterDir)
+      glThread.requestRender()
     }
   }
 
   fun setColorFilterIntensity(intensity: Double) {
     colorFilter.filterIntensity = intensity.toFloat()
+    glThread.requestRender()
   }
 
   // Called from GLThread
@@ -84,10 +86,11 @@ class CameraFilterApplier(
       glThread.requestRender()
     }
     inputSurface = Surface(inputSurfaceTexture)
+    callback.onInputSurfaceCreated(inputSurface!!)
 
     // Order matters.
-    cameraToFrameBuffer.onOutputEglSurfaceCreated(inputTextureIdArray[0])
-    colorFilter.onOutputEglSurfaceCreated(cameraToFrameBuffer.frameBufferTextureId)
+    textureToFrameBuffer.onOutputEglSurfaceCreated(inputTextureIdArray[0])
+    colorFilter.onOutputEglSurfaceCreated(textureToFrameBuffer.frameBufferTextureId)
 //    triangle.onOutputEglSurfaceCreated()
 
     GLES20.glGenFramebuffers(exportFrameBuffer.size, exportFrameBuffer, 0)
@@ -108,7 +111,7 @@ class CameraFilterApplier(
     GLES20.glViewport(0, 0, width, height)
 
     // Order matters.
-    cameraToFrameBuffer.onDrawFrame()
+    textureToFrameBuffer.onDrawFrame()
 
     if (isCapturing) {
       isCapturing = false
@@ -125,7 +128,7 @@ class CameraFilterApplier(
 
       val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
       bitmap.copyPixelsFromBuffer(exportBuffer)
-      captureCallback.onImageAvailable(bitmap)
+      callback.onImageAvailable(bitmap)
       GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0)
     } else {
       colorFilter.onDrawFrame()
@@ -146,7 +149,7 @@ class CameraFilterApplier(
    * Pause the rendering thread.
    *
    * This method should be called when it is no longer desirable for the
-   * CameraFilterApplier to continue rendering, such as in response to
+   * GLFilterApplier to continue rendering, such as in response to
    * {@link android.app.Activity#onStop Activity.onStop}.
    */
   fun onPause() {

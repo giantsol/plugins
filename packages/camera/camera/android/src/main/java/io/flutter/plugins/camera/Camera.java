@@ -10,6 +10,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
+import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraDevice;
@@ -38,6 +39,8 @@ import android.view.Surface;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
+
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -72,8 +75,7 @@ import io.flutter.plugins.camera.features.resolution.ResolutionPreset;
 import io.flutter.plugins.camera.features.sensororientation.DeviceOrientationManager;
 import io.flutter.plugins.camera.features.sensororientation.SensorOrientationFeature;
 import io.flutter.plugins.camera.features.zoomlevel.ZoomLevelFeature;
-import io.flutter.plugins.camera.filter.CameraFilterApplier;
-import io.flutter.plugins.camera.filter.CaptureCallback;
+import io.flutter.plugins.camera.filter.GLFilterApplier;
 import io.flutter.plugins.camera.media.MediaRecorderBuilder;
 import io.flutter.plugins.camera.types.CameraCaptureProperties;
 import io.flutter.plugins.camera.types.CaptureTimeoutsWrapper;
@@ -86,7 +88,7 @@ interface ErrorCallback {
 
 class Camera
     implements CameraCaptureCallback.CameraCaptureStateListener,
-    CaptureCallback {
+    GLFilterApplier.Callback {
   private static final String TAG = "Camera";
 
   private static final HashMap<String, Integer> supportedImageFormats;
@@ -140,7 +142,7 @@ class Camera
 
   private MethodChannel.Result flutterResult;
 
-  private final CameraFilterApplier cameraFilterApplier;
+  private final GLFilterApplier glFilterApplier;
   double saveAspectRatio;
 
   private OrientationEventListener orientationEventListener;
@@ -177,11 +179,22 @@ class Camera
 
     startBackgroundThread();
 
-    cameraFilterApplier = new CameraFilterApplier(
+    final ResolutionFeature resolutionFeature = cameraFeatures.getResolution();
+    final SurfaceTexture outputSurfaceTexture = flutterTexture.surfaceTexture();
+    final int width = resolutionFeature.getCaptureSize().getWidth();
+    final int height = resolutionFeature.getCaptureSize().getHeight();
+    outputSurfaceTexture.setDefaultBufferSize(width, height);
+    
+    final int lensFacing = cameraProperties.getLensFacing();
+
+    glFilterApplier = new GLFilterApplier(
         applicationContext,
-        flutterTexture,
-        cameraFeatures,
-        cameraProperties,
+        new Surface(outputSurfaceTexture),
+        width,
+        height,
+        lensFacing == CameraMetadata.LENS_FACING_BACK
+            ? GLFilterApplier.Type.CAMERA_BACK
+            : GLFilterApplier.Type.CAMERA_FRONT,
         this
     );
     this.saveAspectRatio = saveAspectRatio;
@@ -344,8 +357,8 @@ class Camera
   private void createCaptureSession(
       int templateType, Runnable onSuccessCallback, Surface... surfaces)
       throws CameraAccessException {
-    if (cameraFilterApplier.getInputSurface() == null) {
-      Log.i(TAG, "Delaying createCaptureSession due to cameraFilterApplier.getInputSurface() == null");
+    if (glFilterApplier.getInputSurface() == null) {
+      Log.i(TAG, "Delaying createCaptureSession due to glFilterApplier.getInputSurface() == null");
       new Handler(Looper.getMainLooper()).post(() -> {
         try {
           createCaptureSession(templateType, onSuccessCallback, surfaces);
@@ -358,7 +371,7 @@ class Camera
     }
 
     // This is always non-null here.
-    final Surface cameraFilterInputSurface = cameraFilterApplier.getInputSurface();
+    final Surface cameraFilterInputSurface = glFilterApplier.getInputSurface();
 
     // Close any existing capture session.
     closeCaptureSession();
@@ -366,7 +379,7 @@ class Camera
     // Create a new capture builder.
     previewRequestBuilder = cameraDevice.createCaptureRequest(templateType);
 
-    // Render to cameraFilterApplier's input surface.
+    // Render to glFilterApplier's input surface.
     previewRequestBuilder.addTarget(cameraFilterInputSurface);
 
     List<Surface> remainingSurfaces = Arrays.asList(surfaces);
@@ -554,7 +567,7 @@ class Camera
       dartMessenger.error(flutterResult, "cameraAccess", e.getMessage(), null);
       return;
     }
-    stillBuilder.addTarget(cameraFilterApplier.getInputSurface());
+    stillBuilder.addTarget(glFilterApplier.getInputSurface());
 
     // Zoom.
     stillBuilder.set(
@@ -579,7 +592,7 @@ class Camera
           @Override
           public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
             dartMessenger.sendCameraCaptureStartedEvent();
-            cameraFilterApplier.setCapturing(true);
+            glFilterApplier.setCapturing(true);
           }
 
           @Override
@@ -621,8 +634,8 @@ class Camera
     }
     backgroundHandler = HandlerFactory.create(backgroundHandlerThread.getLooper());
 
-    if (cameraFilterApplier != null) {
-      cameraFilterApplier.onResume();
+    if (glFilterApplier != null) {
+      glFilterApplier.onResume();
     }
   }
 
@@ -639,8 +652,8 @@ class Camera
     backgroundHandlerThread = null;
     backgroundHandler = null;
 
-    if (cameraFilterApplier != null) {
-      cameraFilterApplier.onPause();
+    if (glFilterApplier != null) {
+      glFilterApplier.onPause();
     }
   }
 
@@ -1054,11 +1067,16 @@ class Camera
   }
 
   public void setColorFilter(String lutFilePath, Double intensity) {
-    cameraFilterApplier.setColorFilter(lutFilePath, intensity);
+    glFilterApplier.setColorFilter(lutFilePath, intensity);
   }
 
   public void setColorFilterIntensity(Double intensity) {
-    cameraFilterApplier.setColorFilterIntensity(intensity);
+    glFilterApplier.setColorFilterIntensity(intensity);
+  }
+
+  @Override
+  public void onInputSurfaceCreated(@NotNull Surface surface) {
+    // No-op.
   }
 
   @Override
@@ -1163,7 +1181,7 @@ class Camera
     flutterTexture.release();
     getDeviceOrientationManager().stop();
 
-    cameraFilterApplier.release();
+    glFilterApplier.release();
 
     orientationEventListener.disable();
   }

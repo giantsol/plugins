@@ -7,6 +7,7 @@ import io.flutter.plugins.camera.R
 
 class ColorFilter(
   private val context: Context,
+  type: GLFilterApplier.Type,
 ) {
   companion object {
     private const val VERTEX_SHADER_POSITION_NAME = "a_Position"
@@ -35,16 +36,26 @@ class ColorFilter(
     1.0f, 1.0f
   )
 
-  var matrix: FloatArray = GLUtil.flipMatrix(
-    floatArrayOf(
-      1f, 0f, 0f, 0f,
-      0f, 1f, 0f, 0f,
-      0f, 0f, 1f, 0f,
-      0f, 0f, 0f, 1f
-    ),
-    x = false,
-    y = true,
-  )
+  var matrix: FloatArray = if (type == GLFilterApplier.Type.IMAGE)
+    GLUtil.rotateMatrix(
+      floatArrayOf(
+        1f, 0f, 0f, 0f,
+        0f, 1f, 0f, 0f,
+        0f, 0f, 1f, 0f,
+        0f, 0f, 0f, 1f
+      ),
+      90f, 0f, 0f, 1f
+    ) else
+    GLUtil.flipMatrix(
+      floatArrayOf(
+        1f, 0f, 0f, 0f,
+        0f, 1f, 0f, 0f,
+        0f, 0f, 1f, 0f,
+        0f, 0f, 0f, 1f
+      ),
+      x = false,
+      y = true,
+    )
 
   private val vertexBuffer = GLUtil.getFloatBuffer(vertex)
   private val textureCoordBuffer = GLUtil.getFloatBuffer(textureCoord)
@@ -131,7 +142,7 @@ class ColorFilter(
     GLES20.glDisableVertexAttribArray(vertexTexCoordHandle)
   }
 
-  fun updateLutTexture(lutFilePath: String?, intensity: Double?) {
+  fun updateLutTexture(lutFilePath: String?, intensity: Double?, filterDir: Int) {
     if (lutTextureId != 0) {
       val lutTextureName = intArrayOf(lutTextureId)
       GLES20.glDeleteTextures(lutTextureName.size, lutTextureName, 0)
@@ -142,7 +153,7 @@ class ColorFilter(
       filterIntensity = 0f
       filterFlag = 0
     } else {
-      lutTextureId = GLUtil.loadLUTFileAsTexture(context, lutFilePath)
+      lutTextureId = GLUtil.loadLUTFileAsTexture(context, lutFilePath, filterDir)
       filterIntensity = intensity!!.toFloat()
       filterFlag = if (lutTextureId == 0) {
         0

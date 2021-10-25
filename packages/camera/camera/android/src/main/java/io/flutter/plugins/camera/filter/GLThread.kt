@@ -8,13 +8,11 @@ import javax.microedition.khronos.opengles.GL10
 
 
 class GLThread(
-  private val cameraFilterApplierWeakRef: WeakReference<CameraFilterApplier>,
+  private val glFilterApplierWeakRef: WeakReference<GLFilterApplier>,
   private val width: Int,
   private val height: Int,
 ) : Thread() {
-  companion object {
-    private val glThreadManager: GLThreadManager = GLThreadManager()
-  }
+  private val glThreadManager: GLThreadManager = GLThreadManager()
 
   // Once the thread is started, all accesses to the following member
   // variables are protected by the sGLThreadManager monitor
@@ -55,7 +53,7 @@ class GLThread(
   }
 
   private fun guardedRun() {
-    eglHelper = EGLHelper(cameraFilterApplierWeakRef)
+    eglHelper = EGLHelper(glFilterApplierWeakRef)
     haveEglContext = false
     haveEglSurface = false
     wantRenderNotification = false
@@ -209,11 +207,11 @@ class GLThread(
         }
 
         if (createEglContext) {
-          cameraFilterApplierWeakRef.get()?.onOutputEglSurfaceCreated()
+          glFilterApplierWeakRef.get()?.onOutputEglSurfaceCreated()
           createEglContext = false
         }
 
-        cameraFilterApplierWeakRef.get()?.onDrawFrame()
+        glFilterApplierWeakRef.get()?.onDrawFrame()
 
         when (val swapError = eglHelper.swap()) {
           EGL10.EGL_SUCCESS -> {
